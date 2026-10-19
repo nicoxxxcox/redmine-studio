@@ -16,12 +16,13 @@ toutes les requêtes passent par le petit proxy same-origin intégré à l'appli
   couleur distincte par statut, sprint (plugin Scrum, sinon version cible) visible dans la liste,
   le kanban et le détail, tableau kanban avec changement de statut par glisser-déposer.
 - **Détail d'un ticket** : changement de statut rapide dans l'en-tête, sujet et description
-  éditables, propriétés (statut, priorité, assigné, tracker, version, dates, estimation,
-  avancement), suivi (watchers), relations et sous-tickets, pièces jointes.
+  éditables avec un éditeur enrichi (gras, italique, titres, listes, citations, code, liens et
+  bascule vers la source Textile), propriétés (statut, priorité, assigné, tracker, version, dates,
+  estimation, avancement), suivi (watchers), relations et sous-tickets, pièces jointes.
 - **Discussion** : commentaires triables et repliables (les plus récents d'abord, les 3 derniers
-  ouverts par défaut), historique des modifications compact, édition des notes, notes privées,
-  pièces jointes, collage d'une image du presse-papiers (`Ctrl+V` / `⌘+V`) et brouillons
-  conservés localement.
+  ouverts par défaut), historique des modifications compact, rédaction et édition des notes avec
+  un éditeur enrichi, notes privées, pièces jointes, collage d'une image du presse-papiers
+  (`Ctrl+V` / `⌘+V`) et brouillons conservés localement.
 - **Composeur latéral** : l'ajout d'un commentaire se fait dans la colonne de droite, sans
   masquer les commentaires précédents.
 - **Temps** : saisie rapide, édition/suppression, feuille de temps hebdomadaire, répartition

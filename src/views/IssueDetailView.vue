@@ -55,6 +55,7 @@ import SprintLink from '../components/SprintLink.vue'
 import PriorityBadge from '../components/PriorityBadge.vue'
 import UserAvatar from '../components/UserAvatar.vue'
 import MarkdownBody from '../components/MarkdownBody.vue'
+import RichTextEditor from '../components/RichTextEditor.vue'
 import EmptyState from '../components/EmptyState.vue'
 
 const route = useRoute()
@@ -97,6 +98,7 @@ const submittingComment = ref(false)
 const commentError = ref('')
 const draftSaved = ref(false)
 const uploadingFiles = ref(false)
+const commentEditor = ref(null)
 
 const relationForm = reactive({ relation_type: 'relates', issue_to_id: '', delay: '' })
 const addingRelation = ref(false)
@@ -258,7 +260,7 @@ async function saveJournalEdit(journal) {
 }
 
 function focusComposer() {
-  document.getElementById('issue-comment-input')?.focus()
+  commentEditor.value?.focus()
   document.getElementById('comment-composer')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
@@ -990,7 +992,7 @@ onBeforeUnmount(() => {
             <header class="card-head">
               <h2 class="card-title"><FileText :size="15" /> Description</h2>
               <div class="row">
-                <span v-if="!editingDescription" class="field-hint">Textile / Markdown</span>
+                <span v-if="!editingDescription" class="field-hint">Éditeur enrichi (Textile)</span>
                 <button
                   v-if="!editingDescription"
                   class="btn btn-ghost btn-sm"
@@ -1003,7 +1005,12 @@ onBeforeUnmount(() => {
             </header>
             <div class="card-body">
               <template v-if="editingDescription">
-                <textarea v-model="descriptionDraft" class="textarea textarea-tall" rows="10"></textarea>
+                <RichTextEditor
+                  v-model="descriptionDraft"
+                  min-height="220px"
+                  aria-label="Description du ticket"
+                  placeholder="Décrivez le ticket…"
+                />
                 <div class="edit-actions">
                   <button class="btn" type="button" @click="editingDescription = false">Annuler</button>
                   <button class="btn btn-primary" type="button" :disabled="savingDescription" @click="saveDescription">
@@ -1143,13 +1150,16 @@ onBeforeUnmount(() => {
                       </div>
 
                       <div v-if="editingJournalId === journal.id" class="journal-edit">
-                        <textarea
+                        <RichTextEditor
                           v-model="journalDraft"
-                          class="textarea journal-edit-textarea"
-                          rows="6"
+                          class="journal-edit-editor"
+                          min-height="120px"
+                          compact
+                          aria-label="Modifier le commentaire"
+                          placeholder="Modifiez votre commentaire…"
                           @keydown.esc="cancelJournalEdit"
                           @paste="onJournalPaste"
-                        ></textarea>
+                        />
                         <p v-if="journalEditError" class="composer-error" role="alert">
                           {{ journalEditError }}
                         </p>
@@ -1379,16 +1389,19 @@ onBeforeUnmount(() => {
                 <UserAvatar :user="session.user" :size="26" />
                 <div class="composer-title">
                   <span class="strong">{{ session.displayName || 'Vous' }}</span>
-                  <span class="faint text-xs">Textile ou Markdown accepté</span>
+                  <span class="faint text-xs">Mise en forme : gras, listes, code, liens…</span>
                 </div>
               </div>
-              <textarea
+              <RichTextEditor
                 id="issue-comment-input"
+                ref="commentEditor"
                 v-model="comment"
-                class="textarea composer-textarea"
-                rows="5"
+                class="composer-editor"
+                min-height="120px"
+                compact
+                aria-label="Votre commentaire"
                 placeholder="Votre commentaire… (Ctrl+V / Cmd+V pour coller une image)"
-              ></textarea>
+              />
               <ul v-if="commentFiles.length" class="comment-files">
                 <li v-for="(file, index) in commentFiles" :key="`${file.name}-${file.size}`">
                   <FileImage v-if="file.type?.startsWith('image/')" :size="12" />
@@ -2142,11 +2155,6 @@ onBeforeUnmount(() => {
   margin-top: 7px;
 }
 
-.journal-edit-textarea {
-  min-height: 120px;
-  background: var(--surface);
-}
-
 .journal-edit-actions {
   display: flex;
   justify-content: flex-end;
@@ -2221,11 +2229,6 @@ onBeforeUnmount(() => {
 .draft-saved {
   font-size: 9.5px;
   color: var(--green);
-}
-
-.composer-textarea {
-  background: var(--surface);
-  min-height: 88px;
 }
 
 .composer-foot {

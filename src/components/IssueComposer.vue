@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { FilePlus2, Loader2, Lock, Paperclip, Plus, Trash2 } from 'lucide-vue-next'
 import Modal from './Modal.vue'
+import RichTextEditor from './RichTextEditor.vue'
 import { useSettingsStore } from '../stores/settings.js'
 import { useSessionStore } from '../stores/session.js'
 import { useToastStore } from '../stores/toast.js'
@@ -255,13 +256,16 @@ async function submit() {
 
         <div class="field span-2">
           <label class="field-label" for="issue-description">Description</label>
-          <textarea
+          <RichTextEditor
             id="issue-description"
             v-model="form.description"
-            class="textarea textarea-tall"
+            min-height="200px"
+            aria-label="Description du ticket"
             placeholder="Contexte, étapes de reproduction, résultat attendu…"
-          ></textarea>
-          <span class="field-hint">Textile ou Markdown accepté, comme dans Redmine.</span>
+          />
+          <span class="field-hint">
+            Mise en forme rapide ; l'icône source permet d'éditer le Textile.
+          </span>
         </div>
 
         <div class="field">

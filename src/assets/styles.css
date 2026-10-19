@@ -1354,6 +1354,7 @@ ol {
 
 .rich-text li {
   margin: 0.2em 0;
+  margin-left: calc((var(--rt-level, 1) - 1) * 1.15em);
 }
 
 .rich-text blockquote {
@@ -1404,6 +1405,141 @@ ol {
   border: 0;
   border-top: 1px solid var(--line);
   margin: 1.1em 0;
+}
+
+/* --------------------------------------------------------------------------
+   Éditeur de texte enrichi
+   -------------------------------------------------------------------------- */
+
+.rich-editor {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface);
+  overflow: hidden;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition);
+}
+
+.rich-editor:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.rich-editor.is-disabled {
+  background-color: var(--surface-3);
+  opacity: 0.75;
+}
+
+.rich-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1px;
+  padding: 4px 5px;
+  border-bottom: 1px solid var(--line);
+  background-color: var(--surface-2);
+}
+
+.rich-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    color var(--transition);
+}
+
+.rich-editor.is-compact .rich-tool {
+  width: 25px;
+  height: 24px;
+}
+
+.rich-tool:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.rich-tool.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.rich-tool:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.rich-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 3px;
+  background: var(--line);
+}
+
+.rich-grow {
+  flex: 1;
+}
+
+.rich-editor-area {
+  position: relative;
+  min-height: var(--rich-min-height, 150px);
+  max-height: var(--rich-max-height, 460px);
+  padding: 10px 12px;
+  overflow-y: auto;
+  color: var(--ink);
+  outline: none;
+}
+
+.rich-editor.is-compact .rich-editor-area {
+  --rich-max-height: 300px;
+  padding: 9px 11px;
+}
+
+.rich-editor-area.is-empty::before {
+  content: attr(data-placeholder);
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  right: 12px;
+  color: var(--faint);
+  pointer-events: none;
+}
+
+.rich-editor.is-compact .rich-editor-area.is-empty::before {
+  top: 9px;
+  left: 11px;
+  right: 11px;
+}
+
+.rich-editor-source {
+  width: 100%;
+  min-height: var(--rich-min-height, 150px);
+  max-height: var(--rich-max-height, 460px);
+  padding: 10px 12px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.rich-editor.is-compact .rich-editor-source {
+  --rich-max-height: 300px;
+  padding: 9px 11px;
 }
 
 .rich-text strong {

@@ -224,6 +224,7 @@ export function plainText(value = '') {
     .replace(/```[\s\S]*?```/g, ' [code] ')
     .replace(/!([^!]*)!/g, '$1')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/"([^"]+)":(?:https?:\/\/\S+)/g, '$1')
     .replace(/[*_~`#>]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
@@ -271,6 +272,7 @@ export function escapeHtml(value = '') {
 export function renderRichText(source = '') {
   if (!source) return ''
   const codeBlocks = []
+  const links = []
   let text = String(source).replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
     const index = codeBlocks.length
     codeBlocks.push(
@@ -278,6 +280,45 @@ export function renderRichText(source = '') {
     )
     return `\u0000CODE${index}\u0000`
   })
+
+  // Liens Textile « "libellé":url » : extraits avant l'échappement du HTML.
+  text = text.replace(/"([^"\n]+)":(https?:\/\/[^\s"<>]+)/g, (_, label, url) => {
+    const index = links.length
+    links.push(
+      `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(
+        label,
+      )}</a>`,
+    )
+    return `\u0000LINK${index}\u0000`
+  })
+
+  // Blocs de code Textile « bc. » / « pre. » (jusqu'à la ligne vide suivante).
+  const rawLines = text.split(/\r?\n/)
+  const keptLines = []
+  for (let index = 0; index < rawLines.length; index += 1) {
+    const blockMatch = rawLines[index].match(/^(?:bc|pre)\.{1,2}\s?(.*)$/i)
+    if (!blockMatch) {
+      keptLines.push(rawLines[index])
+      continue
+    }
+    const code = [blockMatch[1]]
+    while (
+      index + 1 < rawLines.length &&
+      rawLines[index + 1].trim() !== '' &&
+      !/^(?:bc|pre)\.{1,2}\s?/i.test(rawLines[index + 1])
+    ) {
+      code.push(rawLines[index + 1])
+      index += 1
+    }
+    const blockIndex = codeBlocks.length
+    codeBlocks.push(
+      `<pre class="rt-code"><code>${escapeHtml(
+        code.join('\n').replace(/\n+$/, ''),
+      )}</code></pre>`,
+    )
+    keptLines.push(`\u0000CODE${blockIndex}\u0000`)
+  }
+  text = keptLines.join('\n')
 
   text = escapeHtml(text)
   text = text.replace(/\r\n/g, '\n')
@@ -382,8 +423,8 @@ export function renderRichText(source = '') {
     }
     closeQuote()
 
-    const bullet = line.match(/^\s*[*+-]\s+(.+)$/)
-    const numbered = line.match(/^\s*(?:\d+[.)]|#)\s+(.+)$/)
+    const bullet = line.match(/^(\s*)[*+-]\s+(.+)$/)
+    const numbered = line.match(/^(\s*)(?:\d+[.)]|#)\s+(.+)$/)
     if (bullet || numbered) {
       flushParagraph()
       const wanted = bullet ? 'ul' : 'ol'
@@ -392,7 +433,11 @@ export function renderRichText(source = '') {
         html.push(`<${wanted}>`)
         listType = wanted
       }
-      html.push(`<li>${inline((bullet || numbered)[1])}</li>`)
+      const match = bullet || numbered
+      const indent = (match[1] || '').replace(/\t/g, '  ')
+      const level = Math.floor(indent.length / 2) + 1
+      const levelAttr = level > 1 ? ` style="--rt-level:${level}"` : ''
+      html.push(`<li${levelAttr}>${inline(match[2])}</li>`)
       continue
     }
     closeList()
@@ -404,7 +449,11 @@ export function renderRichText(source = '') {
   closeList()
   closeQuote()
 
-  return html.join('\n')
+  let output = html.join('\n')
+  if (links.length) {
+    output = output.replace(/\u0000LINK(\d+)\u0000/g, (_, index) => links[Number(index)] || '')
+  }
+  return output
 }
 
 function inline(text) {
