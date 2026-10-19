@@ -144,7 +144,7 @@ export function issueSprint(issue) {
   }
 
   const version = issue?.fixed_version
-  if (version?.name && /sprint|iteration|itération/i.test(version.name)) {
+  if (version?.name) {
     return { label: 'Sprint', value: version.name }
   }
   return null
