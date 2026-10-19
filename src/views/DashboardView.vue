@@ -18,6 +18,7 @@ import {
 } from 'lucide-vue-next'
 import { useSettingsStore } from '../stores/settings.js'
 import { useSessionStore } from '../stores/session.js'
+import { useToastStore } from '../stores/toast.js'
 import { useUiStore } from '../stores/ui.js'
 import { useRefreshStore } from '../stores/refresh.js'
 import {
@@ -32,12 +33,14 @@ import {
 } from '../lib/format.js'
 import IssueId from '../components/IssueId.vue'
 import StatusBadge from '../components/StatusBadge.vue'
+import StatusQuickSelect from '../components/StatusQuickSelect.vue'
 import PriorityBadge from '../components/PriorityBadge.vue'
 import EmptyState from '../components/EmptyState.vue'
 
 const router = useRouter()
 const settings = useSettingsStore()
 const session = useSessionStore()
+const toast = useToastStore()
 const ui = useUiStore()
 const refresh = useRefreshStore()
 
@@ -50,6 +53,7 @@ const overdueCount = ref(0)
 const createdCount = ref(0)
 const recentIssues = ref([])
 const entries = ref([])
+const statusSaving = ref(new Set())
 let loadSequence = 0
 
 const weekStart = ref(startOfWeek(new Date()))
@@ -136,9 +140,9 @@ const stats = computed(() => [
   },
 ])
 
-async function load() {
+async function load({ silent = false } = {}) {
   const sequence = ++loadSequence
-  loading.value = true
+  if (!silent) loading.value = true
   error.value = ''
   const today = toIsoDate()
   const from = toIsoDate(weekStart.value)
@@ -174,6 +178,32 @@ async function load() {
 
   loading.value = false
   loaded.value = true
+}
+
+function setStatusSaving(issueId, value) {
+  const next = new Set(statusSaving.value)
+  if (value) next.add(issueId)
+  else next.delete(issueId)
+  statusSaving.value = next
+}
+
+async function changeStatus(issue, status) {
+  if (!issue || !status || issue.status?.id === status.id || statusSaving.value.has(issue.id)) return
+
+  const previous = issue.status
+  setStatusSaving(issue.id, true)
+  issue.status = status
+  try {
+    await settings.api.updateIssue(issue.id, { status_id: status.id })
+    toast.success(`Ticket #${issue.id} : statut « ${status.name} ».`)
+    await load({ silent: true })
+    refresh.bumpIssue()
+  } catch (err) {
+    issue.status = previous
+    toast.error(err?.message || 'Le changement de statut a été refusé.')
+  } finally {
+    setStatusSaving(issue.id, false)
+  }
 }
 
 onMounted(load)
@@ -279,7 +309,11 @@ watch(() => refresh.timeVersion, load)
               </span>
             </div>
             <PriorityBadge :priority="issue.priority" :show-label="false" />
-            <StatusBadge :status="issue.status" />
+            <StatusQuickSelect
+              :issue="issue"
+              :busy="statusSaving.has(issue.id)"
+              @change="changeStatus(issue, $event)"
+            />
           </div>
         </div>
 
@@ -962,6 +996,7 @@ watch(() => refresh.timeVersion, load)
     flex-wrap: wrap;
   }
   .priority-item .row-status,
+  .priority-item > .status-quick,
   .priority-item > .badge {
     display: none;
   }
