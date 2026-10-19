@@ -62,6 +62,7 @@ const members = ref([])
 const loadingMembers = ref(false)
 const dragging = ref(null)
 const dragOver = ref(null)
+const statusSaving = ref(new Set())
 
 let requestSequence = 0
 let filterTimer = null
@@ -319,6 +320,31 @@ function openComposer(status = null) {
     projectId: filters.project_id || null,
     statusId: status?.id || null,
   })
+}
+
+function setStatusSaving(issueId, value) {
+  const next = new Set(statusSaving.value)
+  if (value) next.add(issueId)
+  else next.delete(issueId)
+  statusSaving.value = next
+}
+
+async function changeStatus(issue, status) {
+  if (!issue || !status || issue.status?.id === status.id || statusSaving.value.has(issue.id)) return
+
+  const previous = issue.status
+  setStatusSaving(issue.id, true)
+  issue.status = status
+  try {
+    await settings.api.updateIssue(issue.id, { status_id: status.id })
+    toast.success(`Ticket #${issue.id} : statut « ${status.name} ».`)
+    refresh.bumpIssue()
+  } catch (err) {
+    issue.status = previous
+    toast.error(err?.message || 'Le changement de statut a été refusé.')
+  } finally {
+    setStatusSaving(issue.id, false)
+  }
 }
 
 function onDragStart(issue, event) {
@@ -591,7 +617,13 @@ watch(() => refresh.issueVersion, () => load())
       </div>
 
       <template v-else-if="issues.length">
-        <IssueRow v-for="issue in issues" :key="issue.id" :issue="issue" />
+        <IssueRow
+          v-for="issue in issues"
+          :key="issue.id"
+          :issue="issue"
+          :status-busy="statusSaving.has(issue.id)"
+          @change-status="changeStatus(issue, $event)"
+        />
       </template>
 
       <EmptyState

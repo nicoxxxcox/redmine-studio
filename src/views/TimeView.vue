@@ -10,7 +10,6 @@ import {
   Pencil,
   Plus,
   RefreshCw,
-  Timer,
   TriangleAlert,
 } from 'lucide-vue-next'
 import { useSettingsStore } from '../stores/settings.js'
@@ -311,7 +310,7 @@ onMounted(load)
 
         <section v-else-if="!loading" class="card">
           <EmptyState
-            :icon="Timer"
+            :icon="Clock3"
             title="Aucun temps saisi"
             :text="projectFilter ? 'Aucune saisie pour ce projet sur cette semaine.' : 'Enregistrez le temps passé sur vos tickets pour remplir votre semaine.'"
           >
@@ -365,7 +364,7 @@ onMounted(load)
           <div class="quick-time">
             <p class="strong">Une saisie rapide ?</p>
             <p class="text-sm muted">
-              Le chronomètre de la barre supérieure préremplit la durée quand vous l'arrêtez.
+              Enregistrez vos heures au fil de la semaine pour garder un suivi à jour.
             </p>
             <button class="btn btn-sm btn-block" type="button" @click="openTime()">
               <Plus :size="13" /> Nouvelle saisie

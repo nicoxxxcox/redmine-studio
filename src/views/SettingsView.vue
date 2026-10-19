@@ -23,7 +23,6 @@ import {
 } from 'lucide-vue-next'
 import { useSettingsStore } from '../stores/settings.js'
 import { useSessionStore } from '../stores/session.js'
-import { useTimerStore } from '../stores/timer.js'
 import { useToastStore } from '../stores/toast.js'
 import { useTheme } from '../lib/theme.js'
 import { ApiError, RedmineApi } from '../lib/api.js'
@@ -33,7 +32,6 @@ import UserAvatar from '../components/UserAvatar.vue'
 const router = useRouter()
 const settings = useSettingsStore()
 const session = useSessionStore()
-const timer = useTimerStore()
 const toast = useToastStore()
 const { resolved } = useTheme()
 
@@ -174,7 +172,6 @@ function clearDrafts() {
 
 function disconnect() {
   if (!window.confirm('Se déconnecter ? La clé API sera oubliée sur cet appareil.')) return
-  timer.cancel()
   session.reset()
   settings.disconnect()
   router.push({ name: 'setup' })

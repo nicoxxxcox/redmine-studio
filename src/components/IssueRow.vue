@@ -11,13 +11,17 @@ import {
 } from '../lib/format.js'
 import IssueId from './IssueId.vue'
 import StatusBadge from './StatusBadge.vue'
+import StatusQuickSelect from './StatusQuickSelect.vue'
 import PriorityBadge from './PriorityBadge.vue'
 import UserAvatar from './UserAvatar.vue'
 
 const props = defineProps({
   issue: { type: Object, required: true },
   compact: { type: Boolean, default: false },
+  statusBusy: { type: Boolean, default: false },
 })
+
+const emit = defineEmits(['change-status'])
 
 const overdue = computed(() => isOverdue(props.issue))
 const sprint = computed(() => issueSprint(props.issue))
@@ -59,7 +63,11 @@ const assigneeName = computed(() => {
     </span>
 
     <span class="row-status">
-      <StatusBadge :status="issue.status" />
+      <StatusQuickSelect
+        :issue="issue"
+        :busy="statusBusy"
+        @change="emit('change-status', $event)"
+      />
     </span>
 
     <span class="row-priority">

@@ -8,20 +8,17 @@ import {
   Clock3,
   Inbox,
   Loader2,
-  Play,
   Plus,
   RefreshCw,
   Sparkles,
   Ticket,
-  Timer,
   TriangleAlert,
   UserRound,
+  Zap,
 } from 'lucide-vue-next'
 import { useSettingsStore } from '../stores/settings.js'
 import { useSessionStore } from '../stores/session.js'
-import { useToastStore } from '../stores/toast.js'
 import { useUiStore } from '../stores/ui.js'
-import { useTimerStore } from '../stores/timer.js'
 import { useRefreshStore } from '../stores/refresh.js'
 import {
   addDays,
@@ -41,9 +38,7 @@ import EmptyState from '../components/EmptyState.vue'
 const router = useRouter()
 const settings = useSettingsStore()
 const session = useSessionStore()
-const toast = useToastStore()
 const ui = useUiStore()
-const timer = useTimerStore()
 const refresh = useRefreshStore()
 
 const loading = ref(true)
@@ -181,18 +176,6 @@ async function load() {
   loaded.value = true
 }
 
-function startTimer(issue) {
-  if (timer.running) {
-    if (timer.timer.issueId === issue.id) {
-      toast.info('Un chronomètre tourne déjà sur ce ticket.')
-      return
-    }
-    if (!window.confirm('Un chronomètre tourne déjà. Le remplacer ?')) return
-  }
-  timer.start(issue)
-  toast.success(`Chronomètre démarré sur le ticket #${issue.id}.`)
-}
-
 onMounted(load)
 watch(() => refresh.timeVersion, load)
 </script>
@@ -297,14 +280,6 @@ watch(() => refresh.timeVersion, load)
             </div>
             <PriorityBadge :priority="issue.priority" :show-label="false" />
             <StatusBadge :status="issue.status" />
-            <button
-              class="timer-start"
-              type="button"
-              title="Démarrer le chronomètre"
-              @click.stop="startTimer(issue)"
-            >
-              <Play :size="12" fill="currentColor" />
-            </button>
           </div>
         </div>
 
@@ -364,7 +339,7 @@ watch(() => refresh.timeVersion, load)
 
         <section class="card quick-card">
           <header class="card-head">
-            <h2 class="card-title"><Timer :size="15" /> Actions rapides</h2>
+            <h2 class="card-title"><Zap :size="15" /> Actions rapides</h2>
           </header>
           <div class="quick-body">
             <button class="quick-action" type="button" @click="ui.openIssueComposer()">
@@ -671,30 +646,6 @@ watch(() => refresh.timeVersion, load)
 .meta-due.is-late {
   color: var(--red);
   font-weight: 600;
-}
-
-.timer-start {
-  display: grid;
-  place-items: center;
-  width: 27px;
-  height: 27px;
-  flex: none;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: var(--surface);
-  color: var(--muted);
-  opacity: 0;
-  transition: all var(--transition);
-}
-
-.priority-item:hover .timer-start {
-  opacity: 1;
-}
-
-.timer-start:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-ink);
 }
 
 .priority-skeleton {

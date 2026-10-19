@@ -174,8 +174,8 @@ function back() {
           <li>
             <span class="feature-icon"><Clock3 :size="16" /></span>
             <div>
-              <strong>Chronomètre intégré</strong>
-              <span>Démarrez, arrêtez, saisissez. Le temps est prérempli.</span>
+              <strong>Temps simplifié</strong>
+              <span>Saisissez et ajustez votre temps directement sur chaque ticket.</span>
             </div>
           </li>
           <li>

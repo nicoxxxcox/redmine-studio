@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSessionStore } from '../stores/session.js'
 import { useSettingsStore } from '../stores/settings.js'
-import { useTimerStore } from '../stores/timer.js'
 import { useUiStore } from '../stores/ui.js'
 import UserAvatar from './UserAvatar.vue'
 import {
@@ -20,10 +19,7 @@ import {
 const router = useRouter()
 const session = useSessionStore()
 const settings = useSettingsStore()
-const timer = useTimerStore()
 const ui = useUiStore()
-
-const showcaseProjects = computed(() => session.projects.slice(0, 7))
 
 const navItems = computed(() => [
   {
@@ -68,19 +64,9 @@ function go(to) {
   router.push(to)
 }
 
-function projectLink(project) {
-  return { name: 'issues', query: { project_id: project.id, status_id: 'open' } }
-}
-
-function isProjectActive(project) {
-  const route = router.currentRoute.value
-  return route.name === 'issues' && String(route.query.project_id) === String(project.id)
-}
-
 async function logout() {
   if (!window.confirm('Se déconnecter de Redmine Studio ? Votre clé API sera oubliée.')) return
   ui.toggleSidebar(false)
-  timer.cancel()
   session.reset()
   settings.disconnect()
   router.push({ name: 'setup' })
@@ -128,29 +114,6 @@ async function logout() {
         >
           <component :is="item.icon" :size="16.5" class="nav-icon" />
           <span>{{ item.label }}</span>
-        </button>
-      </nav>
-
-      <nav v-if="showcaseProjects.length" class="nav-section" aria-label="Projets">
-        <div class="nav-label-row">
-          <p class="nav-label">Projets</p>
-          <button class="nav-mini-link" type="button" @click="go({ name: 'projects' })">
-            Tout voir
-          </button>
-        </div>
-        <button
-          v-for="project in showcaseProjects"
-          :key="project.id"
-          type="button"
-          class="nav-item nav-project"
-          :class="{ 'is-active': isProjectActive(project) }"
-          @click="go(projectLink(project))"
-        >
-          <span
-            class="project-dot"
-            :style="{ background: `hsl(${(project.id * 47) % 360} 62% 52%)` }"
-          ></span>
-          <span class="truncate">{{ project.name }}</span>
         </button>
       </nav>
     </div>
@@ -289,14 +252,6 @@ async function logout() {
   margin-bottom: 20px;
 }
 
-.nav-label-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 9px;
-  margin-bottom: 4px;
-}
-
 .nav-label {
   padding: 0 9px;
   margin-bottom: 4px;
@@ -305,24 +260,6 @@ async function logout() {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--faint);
-}
-
-.nav-label-row .nav-label {
-  padding: 0;
-  margin: 0;
-}
-
-.nav-mini-link {
-  border: 0;
-  background: transparent;
-  padding: 0;
-  color: var(--faint);
-  font-size: 10px;
-  font-weight: 550;
-}
-
-.nav-mini-link:hover {
-  color: var(--accent);
 }
 
 .nav-item {
@@ -356,23 +293,6 @@ async function logout() {
 .nav-icon {
   flex: none;
   opacity: 0.9;
-}
-
-.nav-project {
-  padding-left: 11px;
-  gap: 9px;
-}
-
-.project-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 2px;
-  flex: none;
-  opacity: 0.82;
-}
-
-.nav-item.is-active .project-dot {
-  opacity: 1;
 }
 
 .sidebar-foot {

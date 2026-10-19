@@ -6,7 +6,6 @@ import { useUiStore } from '../stores/ui.js'
 import { useSettingsStore } from '../stores/settings.js'
 import { useTheme } from '../lib/theme.js'
 import { toIsoDate } from '../lib/format.js'
-import TimerChip from './TimerChip.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -36,8 +35,6 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
     </div>
 
     <div class="topbar-actions">
-      <TimerChip />
-
       <button class="search-trigger" type="button" @click="ui.openCommand()">
         <Search :size="15" />
         <span class="search-placeholder">Rechercher un ticket…</span>

@@ -1,7 +1,7 @@
 # Redmine Studio
 
 Client web moderne et ergonomique pour **Redmine 3.4+**, centré sur le travail quotidien :
-consulter ses tickets, commenter, suivre le temps et chronométrer ses interventions.
+consulter ses tickets, commenter et suivre le temps passé.
 
 L'application se connecte directement à votre instance Redmine avec **votre clé API**. Aucun
 compte, aucune base de données et aucun service tiers : la clé reste dans votre navigateur et
@@ -12,19 +12,20 @@ toutes les requêtes passent par le petit proxy same-origin intégré à l'appli
 - **Tableau de bord** : tickets assignés, retards, tickets créés, temps de la semaine, activité
   récente.
 - **Tickets** : liste filtrable (projet, statut, assigné, priorité, tracker, auteur, retard,
-  recherche), numéro copiable en un clic, une couleur distincte par statut, sprint visible
-  dans la liste et le kanban, tableau kanban avec changement de statut par glisser-déposer.
-- **Détail d'un ticket** : sujet et description éditables, propriétés (statut, priorité,
-  assigné, tracker, version, dates, estimation, avancement), suivi (watchers), relations et
-  sous-tickets, pièces jointes.
+  recherche), changement de statut rapide depuis chaque ligne, numéro copiable en un clic, une
+  couleur distincte par statut, sprint visible dans la liste et le kanban, tableau kanban avec
+  changement de statut par glisser-déposer.
+- **Détail d'un ticket** : changement de statut rapide dans l'en-tête, sujet et description
+  éditables, propriétés (statut, priorité, assigné, tracker, version, dates, estimation,
+  avancement), suivi (watchers), relations et sous-tickets, pièces jointes.
 - **Discussion** : commentaires triables et repliables (les plus récents d'abord, les 3 derniers
   ouverts par défaut), historique des modifications compact, édition des notes, notes privées,
   pièces jointes, collage d'une image du presse-papiers (`Ctrl+V` / `⌘+V`) et brouillons
   conservés localement.
 - **Composeur latéral** : l'ajout d'un commentaire se fait dans la colonne de droite, sans
   masquer les commentaires précédents.
-- **Temps** : chronomètre persistant, saisie rapide, édition/suppression, feuille de temps
-  hebdomadaire, répartition par activité et résumé.
+- **Temps** : saisie rapide, édition/suppression, feuille de temps hebdomadaire, répartition
+  par activité et résumé.
 - **Projets** : accès rapide aux tickets de chaque projet.
 - **Confort** : thème clair/sombre/système, palette de commandes (`⌘/Ctrl + K`), raccourcis
   clavier, interface responsive, notifications.
@@ -111,7 +112,6 @@ Aucune modification d'Apache/nginx n'est nécessaire sur le serveur Redmine.
 - Elle n'est jamais écrite dans les logs du proxy ni envoyée à un service externe.
 - Les brouillons de commentaires sont enregistrés dans `localStorage` sous
   `redmine-studio.issue-draft.<id>` et peuvent être effacés depuis **Paramètres**.
-- L'état du chronomètre est conservé dans `localStorage` sous `redmine-studio.timer.v1`.
 - Le proxy accepte l'URL cible depuis l'en-tête `X-Redmine-Base`. Il est donc destiné à un usage
   local ou à un déploiement de confiance : ne l'exposez pas publiquement sans authentification.
 

@@ -23,12 +23,10 @@ import {
   Milestone,
   Paperclip,
   Pencil,
-  Play,
   Plus,
   RefreshCw,
   Send,
   Star,
-  Timer,
   TriangleAlert,
   X,
 } from 'lucide-vue-next'
@@ -36,7 +34,6 @@ import { useSettingsStore } from '../stores/settings.js'
 import { useSessionStore } from '../stores/session.js'
 import { useToastStore } from '../stores/toast.js'
 import { useUiStore } from '../stores/ui.js'
-import { useTimerStore } from '../stores/timer.js'
 import { useRefreshStore } from '../stores/refresh.js'
 import {
   formatDate,
@@ -53,7 +50,7 @@ import {
 import { saveBlob, ApiError } from '../lib/api.js'
 import { copyText } from '../lib/clipboard.js'
 import IssueId from '../components/IssueId.vue'
-import StatusBadge from '../components/StatusBadge.vue'
+import StatusQuickSelect from '../components/StatusQuickSelect.vue'
 import PriorityBadge from '../components/PriorityBadge.vue'
 import UserAvatar from '../components/UserAvatar.vue'
 import MarkdownBody from '../components/MarkdownBody.vue'
@@ -65,7 +62,6 @@ const settings = useSettingsStore()
 const session = useSessionStore()
 const toast = useToastStore()
 const ui = useUiStore()
-const timer = useTimerStore()
 const refresh = useRefreshStore()
 
 const issueId = computed(() => Number(route.params.id))
@@ -173,7 +169,6 @@ const timeProgress = computed(() => {
 const isWatching = computed(() =>
   (issue.value?.watchers || []).some((watcher) => watcher.id === session.user?.id),
 )
-const isTimerOnIssue = computed(() => timer.running && timer.issueId === issueId.value)
 const journalSortLabel = computed(() =>
   journalSort.value === 'asc' ? 'Plus anciens d’abord' : 'Plus récents d’abord',
 )
@@ -691,17 +686,9 @@ function openTime(entry = null) {
   })
 }
 
-function startTimer() {
-  if (!issue.value) return
-  if (timer.running) {
-    if (timer.issueId === issue.value.id) {
-      toast.info('Le chronomètre tourne déjà sur ce ticket.')
-      return
-    }
-    if (!window.confirm('Un chronomètre tourne sur un autre ticket. Le remplacer ?')) return
-  }
-  timer.start(issue.value)
-  toast.success('Chronomètre démarré.')
+function quickChangeStatus(status) {
+  if (!status || !issue.value || issue.value.status?.id === status.id) return
+  patch('status_id', status.id)
 }
 
 async function copyLink() {
@@ -863,7 +850,12 @@ onBeforeUnmount(() => {
       <header class="detail-head">
         <div class="detail-head-main">
           <div class="detail-kicker">
-            <StatusBadge :status="issue.status" />
+            <StatusQuickSelect
+              :issue="issue"
+              :options="statusOptions"
+              :busy="updatingField === 'status_id'"
+              @change="quickChangeStatus"
+            />
             <span v-if="issue.tracker" class="tag">{{ issue.tracker.name }}</span>
             <span v-if="sprint" class="pill sprint-pill" data-tone="violet" :title="sprint.label">
               <Milestone :size="11" /> {{ sprint.value }}
@@ -924,10 +916,6 @@ onBeforeUnmount(() => {
             @click="toggleWatch"
           >
             <Star :size="16" :fill="isWatching ? 'currentColor' : 'none'" />
-          </button>
-          <button class="btn" type="button" @click="startTimer">
-            <Play :size="14" :fill="'currentColor'" />
-            {{ isTimerOnIssue ? 'Chrono en cours' : 'Chronomètre' }}
           </button>
           <button class="btn" type="button" @click="openTime()">
             <Clock3 :size="14" /> Saisir du temps
@@ -1191,9 +1179,6 @@ onBeforeUnmount(() => {
             <header class="card-head">
               <h2 class="card-title"><Clock3 :size="15" /> Temps passé</h2>
               <div class="row">
-                <button class="btn btn-sm" type="button" @click="startTimer">
-                  <Play :size="13" :fill="'currentColor'" /> Chronomètre
-                </button>
                 <button class="btn btn-primary btn-sm" type="button" @click="openTime()">
                   <Plus :size="13" /> Saisir du temps
                 </button>
@@ -1581,7 +1566,7 @@ onBeforeUnmount(() => {
 
           <section class="card time-card">
             <header class="card-head">
-              <h2 class="card-title"><Timer :size="15" /> Suivi du temps</h2>
+              <h2 class="card-title"><Clock3 :size="15" /> Suivi du temps</h2>
             </header>
             <div class="time-card-body">
               <div class="time-card-total">
@@ -1594,9 +1579,6 @@ onBeforeUnmount(() => {
               <div class="time-card-actions">
                 <button class="btn btn-sm" type="button" @click="openTime()">
                   <Plus :size="13" /> Saisir du temps
-                </button>
-                <button class="btn btn-sm" type="button" @click="startTimer">
-                  <Play :size="12" :fill="'currentColor'" /> Chrono
                 </button>
               </div>
             </div>

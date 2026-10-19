@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { CalendarDays, Clock3, Loader2, Timer, Trash2 } from 'lucide-vue-next'
+import { CalendarDays, Clock3, Loader2, Trash2 } from 'lucide-vue-next'
 import Modal from './Modal.vue'
 import IssuePicker from './IssuePicker.vue'
 import { useSettingsStore } from '../stores/settings.js'
@@ -31,7 +31,6 @@ const deleting = ref(false)
 const error = ref('')
 
 const editing = computed(() => Boolean(props.draft.entry))
-const isTimer = computed(() => Boolean(props.draft.fromTimer))
 const activeActivities = computed(() =>
   session.activities.filter((activity) => activity.active !== false),
 )
@@ -152,20 +151,9 @@ async function remove() {
     @close="emit('close')"
   >
     <form id="time-entry-form" class="time-form" @submit.prevent="submit">
-      <div v-if="isTimer" class="timer-notice">
-        <span class="timer-notice-icon"><Timer :size="16" /></span>
-        <div>
-          <p class="strong">Chronomètre arrêté</p>
-          <p class="text-sm muted">
-            Durée mesurée : {{ Number(draft.hours || 0).toLocaleString('fr-FR') }} h — ajustez si
-            besoin avant d'enregistrer.
-          </p>
-        </div>
-      </div>
-
       <div class="field">
         <label class="field-label">Ticket</label>
-        <IssuePicker v-model="issue" :autofocus="!isTimer" />
+        <IssuePicker v-model="issue" autofocus />
       </div>
 
       <div class="form-grid">
@@ -259,32 +247,6 @@ async function remove() {
   display: flex;
   flex-direction: column;
   gap: 15px;
-}
-
-.timer-notice {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 11px 13px;
-  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
-  border-radius: var(--radius);
-  background: var(--accent-soft);
-}
-
-.timer-notice-icon {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--accent);
-  flex: none;
-}
-
-.timer-notice p:first-child {
-  color: var(--accent);
-  font-size: 12.5px;
 }
 
 .hours-row {
