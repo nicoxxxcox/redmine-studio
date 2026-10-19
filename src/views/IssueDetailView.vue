@@ -1596,6 +1596,13 @@ onBeforeUnmount(() => {
                   {{ fullName(issue.author) }}
                 </span>
               </div>
+              <div v-if="sprint" class="meta-row">
+                <span class="meta-label">{{ sprint.label }}</span>
+                <span class="meta-value">
+                  <Milestone :size="13" />
+                  <span class="truncate" :title="sprint.value">{{ sprint.value }}</span>
+                </span>
+              </div>
               <div class="meta-row">
                 <span class="meta-label">Créé le</span>
                 <span class="meta-value">{{ formatDateTime(issue.created_on) }}</span>

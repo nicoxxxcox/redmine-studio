@@ -123,7 +123,7 @@ export function parseHoursInput(input) {
   return Math.round(value * 100) / 100
 }
 
-const SPRINT_FIELD_PATTERN = /(?:^|[^a-z])(sprint|iteration|itération|cycle)(?:[^a-z]|$)/i
+const SPRINT_FIELD_PATTERN = /(?:^|[^a-z])(sprints?|it[eé]rations?|cycles?)(?:[^a-z]|$)/i
 
 /**
  * Récupère le sprint d'un ticket, qu'il provienne d'un champ personnalisé

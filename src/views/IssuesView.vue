@@ -600,7 +600,7 @@ watch(() => refresh.issueVersion, () => load())
         <span class="col-status">Statut</span>
         <span class="col-priority">Priorité</span>
         <span class="col-assignee">Assigné</span>
-        <span class="col-sprint">Sprint</span>
+        <span class="col-sprint">Sprints</span>
         <span class="col-updated">Activité</span>
       </div>
 
