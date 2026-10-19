@@ -1,7 +1,14 @@
 <script setup>
 import { computed } from 'vue'
-import { CalendarClock } from 'lucide-vue-next'
-import { formatDate, formatDateTime, formatHours, isOverdue, relativeTime } from '../lib/format.js'
+import { CalendarClock, Milestone } from 'lucide-vue-next'
+import {
+  formatDate,
+  formatDateTime,
+  formatHours,
+  isOverdue,
+  issueSprint,
+  relativeTime,
+} from '../lib/format.js'
 import StatusBadge from './StatusBadge.vue'
 import PriorityBadge from './PriorityBadge.vue'
 import UserAvatar from './UserAvatar.vue'
@@ -12,6 +19,7 @@ const props = defineProps({
 })
 
 const overdue = computed(() => isOverdue(props.issue))
+const sprint = computed(() => issueSprint(props.issue))
 const assigneeName = computed(() => {
   const user = props.issue.assigned_to
   if (!user) return ''
@@ -33,6 +41,10 @@ const assigneeName = computed(() => {
         <span v-if="issue.project" class="project-name">{{ issue.project.name }}</span>
         <span v-if="issue.tracker" class="tracker-name">
           <span class="meta-sep">·</span>{{ issue.tracker.name }}
+        </span>
+        <span v-if="sprint" class="sprint-chip" :title="sprint.label">
+          <Milestone :size="10" />
+          {{ sprint.value }}
         </span>
         <span v-if="issue.spent_hours" class="meta-hours">{{ formatHours(issue.spent_hours) }}</span>
       </span>
@@ -156,6 +168,27 @@ const assigneeName = computed(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.sprint-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  max-width: 140px;
+  height: 17px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--violet-soft);
+  color: var(--violet);
+  font-size: 9.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sprint-chip svg {
+  flex: none;
 }
 
 .meta-hours {

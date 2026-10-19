@@ -12,12 +12,16 @@ toutes les requêtes passent par le petit proxy same-origin intégré à l'appli
 - **Tableau de bord** : tickets assignés, retards, tickets créés, temps de la semaine, activité
   récente.
 - **Tickets** : liste filtrable (projet, statut, assigné, priorité, tracker, auteur, retard,
-  recherche) et tableau kanban avec changement de statut par glisser-déposer.
+  recherche), sprint visible dans la liste et le kanban, tableau kanban avec changement de
+  statut par glisser-déposer.
 - **Détail d'un ticket** : sujet et description éditables, propriétés (statut, priorité,
   assigné, tracker, version, dates, estimation, avancement), suivi (watchers), relations et
   sous-tickets, pièces jointes.
-- **Discussion** : historique complet, notes privées, commentaires avec pièces jointes,
-  brouillons conservés localement.
+- **Discussion** : commentaires triables et repliables (les 3 derniers sont ouverts par
+  défaut), historique des modifications compact, édition des notes, notes privées,
+  pièces jointes et brouillons conservés localement.
+- **Composeur latéral** : l'ajout d'un commentaire se fait dans la colonne de droite, sans
+  masquer les commentaires précédents.
 - **Temps** : chronomètre persistant, saisie rapide, édition/suppression, feuille de temps
   hebdomadaire, répartition par activité et résumé.
 - **Projets** : accès rapide aux tickets de chaque projet.
@@ -109,6 +113,15 @@ Aucune modification d'Apache/nginx n'est nécessaire sur le serveur Redmine.
 - L'état du chronomètre est conservé dans `localStorage` sous `redmine-studio.timer.v1`.
 - Le proxy accepte l'URL cible depuis l'en-tête `X-Redmine-Base`. Il est donc destiné à un usage
   local ou à un déploiement de confiance : ne l'exposez pas publiquement sans authentification.
+
+### Édition des commentaires
+
+Redmine 3.4 n'expose pas l'édition des journaux dans son API REST. Redmine Studio utilise donc
+la route web `/journals/:id/edit`, récupère le jeton CSRF du formulaire puis soumet la note.
+Cette opération nécessite une **session Redmine active** dans le navigateur. Pour éviter toute
+fuite, le proxy ne transmet le cookie de session que lorsque Redmine est servi sur le même nom
+d'hôte que l'application (les ports peuvent différer). Sur une instance distante, l'édition est
+refusée avec un message explicite ; les autres fonctions restent disponibles avec la clé API.
 
 ## Certificats et réseau
 

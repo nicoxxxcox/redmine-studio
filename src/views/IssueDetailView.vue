@@ -2,8 +2,13 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
+  ArrowDownWideNarrow,
   ArrowLeft,
+  ArrowUpWideNarrow,
   CalendarDays,
+  ChevronRight,
+  ChevronsDownUp,
+  ChevronsUpDown,
   Clock3,
   Copy,
   Download,
@@ -13,6 +18,8 @@ import {
   Loader2,
   Lock,
   MessageSquare,
+  MessageSquarePlus,
+  Milestone,
   Paperclip,
   Pencil,
   Play,
@@ -37,6 +44,8 @@ import {
   formatHours,
   fullName,
   isOverdue,
+  issueSprint,
+  plainText,
   relativeTime,
   toIsoDate,
 } from '../lib/format.js'
@@ -66,6 +75,12 @@ const reloading = ref(false)
 const error = ref('')
 const activeTab = ref('discussion')
 const timelineNotesOnly = ref(false)
+const journalSort = ref('asc')
+const journalOpen = ref({})
+const editingJournalId = ref(null)
+const journalDraft = ref('')
+const journalEditError = ref('')
+const savingJournalId = ref(null)
 
 const editingDescription = ref(false)
 const descriptionDraft = ref('')
@@ -115,13 +130,28 @@ const assigneeOptions = computed(() => {
 
 const journals = computed(() =>
   [...(issue.value?.journals || [])]
-    .filter((journal) => journal.notes || journal.details?.length)
+    .filter((journal) => hasNote(journal) || journal.details?.length)
     .sort((a, b) => new Date(a.created_on) - new Date(b.created_on)),
 )
-const visibleJournals = computed(() =>
-  timelineNotesOnly.value ? journals.value.filter((journal) => journal.notes) : journals.value,
+const sortedJournals = computed(() =>
+  journalSort.value === 'desc' ? [...journals.value].reverse() : journals.value,
 )
-const noteCount = computed(() => journals.value.filter((journal) => journal.notes).length)
+const visibleJournals = computed(() =>
+  timelineNotesOnly.value
+    ? sortedJournals.value.filter((journal) => hasNote(journal))
+    : sortedJournals.value,
+)
+const noteJournals = computed(() => journals.value.filter((journal) => hasNote(journal)))
+const recentNoteIds = computed(
+  () => new Set(noteJournals.value.slice(-3).map((journal) => journal.id)),
+)
+const notesAllExpanded = computed(
+  () =>
+    noteJournals.value.length > 0 &&
+    noteJournals.value.every((journal) => isJournalOpen(journal)),
+)
+const noteCount = computed(() => noteJournals.value.length)
+const sprint = computed(() => issueSprint(issue.value))
 const attachments = computed(() => issue.value?.attachments || [])
 const relations = computed(() => issue.value?.relations || [])
 const children = computed(() => issue.value?.children || [])
@@ -141,6 +171,97 @@ const isWatching = computed(() =>
   (issue.value?.watchers || []).some((watcher) => watcher.id === session.user?.id),
 )
 const isTimerOnIssue = computed(() => timer.running && timer.issueId === issueId.value)
+const journalSortLabel = computed(() =>
+  journalSort.value === 'asc' ? 'Plus anciens d’abord' : 'Plus récents d’abord',
+)
+
+function hasNote(journal) {
+  return Boolean(journal?.notes && journal.notes.trim())
+}
+
+function isJournalOpen(journal) {
+  if (!hasNote(journal)) return false
+  const key = String(journal.id)
+  if (Object.prototype.hasOwnProperty.call(journalOpen.value, key)) {
+    return journalOpen.value[key]
+  }
+  return recentNoteIds.value.has(journal.id)
+}
+
+function toggleJournal(journal) {
+  if (!hasNote(journal)) return
+  journalOpen.value = {
+    ...journalOpen.value,
+    [journal.id]: !isJournalOpen(journal),
+  }
+}
+
+function toggleAllJournals() {
+  const open = !notesAllExpanded.value
+  const next = { ...journalOpen.value }
+  for (const journal of noteJournals.value) next[journal.id] = open
+  journalOpen.value = next
+}
+
+function toggleJournalSort() {
+  journalSort.value = journalSort.value === 'asc' ? 'desc' : 'asc'
+}
+
+function notePreview(journal) {
+  return plainText(journal.notes).slice(0, 180) || 'Commentaire sans texte.'
+}
+
+function journalSummary(journal) {
+  return (journal.details || []).map((detail) => detailText(detail)).join(' · ')
+}
+
+function canEditJournal(journal) {
+  return Boolean(
+    hasNote(journal) &&
+      session.user &&
+      (journal.user?.id === session.user.id || session.user.admin),
+  )
+}
+
+function startJournalEdit(journal) {
+  editingJournalId.value = journal.id
+  journalDraft.value = journal.notes || ''
+  journalEditError.value = ''
+  journalOpen.value = { ...journalOpen.value, [journal.id]: true }
+}
+
+function cancelJournalEdit() {
+  editingJournalId.value = null
+  journalDraft.value = ''
+  journalEditError.value = ''
+}
+
+async function saveJournalEdit(journal) {
+  const notes = journalDraft.value.trim()
+  if (!notes) {
+    journalEditError.value = 'Le commentaire ne peut pas être vide.'
+    return
+  }
+  savingJournalId.value = journal.id
+  journalEditError.value = ''
+  try {
+    await settings.api.updateJournal(journal.id, { notes })
+    editingJournalId.value = null
+    journalDraft.value = ''
+    toast.success('Commentaire mis à jour.')
+    await load({ silent: true })
+    refresh.bumpIssue()
+  } catch (err) {
+    journalEditError.value = err?.message || 'Impossible de modifier ce commentaire.'
+  } finally {
+    savingJournalId.value = null
+  }
+}
+
+function focusComposer() {
+  document.getElementById('issue-comment-input')?.focus()
+  document.getElementById('comment-composer')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
 
 const relationTypes = [
   { value: 'relates', label: 'Est lié à' },
@@ -281,6 +402,12 @@ watch(issueId, () => {
   editingSubject.value = false
   draftRestoredFor = null
   activeTab.value = 'discussion'
+  timelineNotesOnly.value = false
+  journalSort.value = 'asc'
+  journalOpen.value = {}
+  editingJournalId.value = null
+  journalDraft.value = ''
+  journalEditError.value = ''
   load()
 })
 
@@ -671,6 +798,9 @@ onBeforeUnmount(() => {
           <div class="detail-kicker">
             <StatusBadge :status="issue.status" />
             <span v-if="issue.tracker" class="tag">{{ issue.tracker.name }}</span>
+            <span v-if="sprint" class="pill sprint-pill" data-tone="violet" :title="sprint.label">
+              <Milestone :size="11" /> {{ sprint.value }}
+            </span>
             <span v-if="issue.is_private" class="tag"><Lock :size="11" /> Privé</span>
             <span v-if="isOverdue(issue)" class="overdue-tag">
               <TriangleAlert :size="11" /> En retard
@@ -831,33 +961,79 @@ onBeforeUnmount(() => {
           <section class="card activity-card">
             <header class="card-head activity-head">
               <h2 class="card-title"><MessageSquare :size="15" /> Activité</h2>
-              <div class="segmented">
+              <div class="activity-tools">
+                <div class="segmented">
+                  <button
+                    type="button"
+                    :class="{ 'is-active': !timelineNotesOnly }"
+                    @click="timelineNotesOnly = false"
+                  >
+                    Tout
+                  </button>
+                  <button
+                    type="button"
+                    :class="{ 'is-active': timelineNotesOnly }"
+                    @click="timelineNotesOnly = true"
+                  >
+                    Commentaires
+                    <span class="tab-count">{{ noteCount }}</span>
+                  </button>
+                </div>
                 <button
+                  class="btn btn-sm journal-sort"
                   type="button"
-                  :class="{ 'is-active': !timelineNotesOnly }"
-                  @click="timelineNotesOnly = false"
+                  :title="journalSortLabel"
+                  :aria-label="journalSortLabel"
+                  @click="toggleJournalSort"
                 >
-                  Tout
+                  <ArrowDownWideNarrow v-if="journalSort === 'desc'" :size="14" />
+                  <ArrowUpWideNarrow v-else :size="14" />
+                  <span>{{ journalSort === 'desc' ? 'Récents' : 'Anciens' }}</span>
                 </button>
                 <button
+                  v-if="noteCount"
+                  class="btn btn-ghost btn-icon btn-sm journal-tool"
                   type="button"
-                  :class="{ 'is-active': timelineNotesOnly }"
-                  @click="timelineNotesOnly = true"
+                  :title="notesAllExpanded ? 'Tout replier' : 'Tout déplier'"
+                  :aria-label="notesAllExpanded ? 'Tout replier' : 'Tout déplier'"
+                  @click="toggleAllJournals"
                 >
-                  Commentaires
-                  <span class="tab-count">{{ noteCount }}</span>
+                  <ChevronsDownUp v-if="notesAllExpanded" :size="14" />
+                  <ChevronsUpDown v-else :size="14" />
+                </button>
+                <button class="btn btn-sm comment-jump" type="button" @click="focusComposer">
+                  <MessageSquarePlus :size="13" /> Commenter
                 </button>
               </div>
             </header>
 
             <div class="timeline">
               <div v-if="visibleJournals.length" class="timeline-list">
-                <article v-for="journal in visibleJournals" :key="journal.id" class="timeline-item">
+                <article
+                  v-for="journal in visibleJournals"
+                  :key="journal.id"
+                  class="timeline-item"
+                  :class="{
+                    'is-history': !hasNote(journal),
+                    'is-collapsed': hasNote(journal) && !isJournalOpen(journal),
+                  }"
+                >
                   <div class="timeline-rail">
-                    <UserAvatar :user="journal.user" :size="28" />
+                    <UserAvatar :user="journal.user" :size="hasNote(journal) ? 28 : 18" />
                   </div>
-                  <div class="timeline-content">
+
+                  <div v-if="hasNote(journal)" class="timeline-content">
                     <div class="timeline-head">
+                      <button
+                        class="journal-toggle"
+                        type="button"
+                        :aria-expanded="isJournalOpen(journal)"
+                        :aria-label="isJournalOpen(journal) ? 'Replier le commentaire' : 'Déplier le commentaire'"
+                        :title="isJournalOpen(journal) ? 'Replier' : 'Déplier'"
+                        @click="toggleJournal(journal)"
+                      >
+                        <ChevronRight :size="15" :class="{ 'is-open': isJournalOpen(journal) }" />
+                      </button>
                       <span class="strong">{{ fullName(journal.user) }}</span>
                       <span class="timeline-time" :title="formatDateTime(journal.created_on)">
                         {{ relativeTime(journal.created_on) }}
@@ -865,17 +1041,71 @@ onBeforeUnmount(() => {
                       <span v-if="journal.private_notes" class="private-badge">
                         <Lock :size="10" /> Note privée
                       </span>
+                      <span class="spacer"></span>
+                      <button
+                        v-if="canEditJournal(journal)"
+                        class="journal-edit-btn"
+                        type="button"
+                        title="Modifier ce commentaire"
+                        @click="startJournalEdit(journal)"
+                      >
+                        <Pencil :size="12" /> Modifier
+                      </button>
                     </div>
 
-                    <div v-if="journal.details?.length" class="journal-changes">
-                      <span v-for="(detail, index) in journal.details" :key="index" class="journal-change">
-                        {{ detailText(detail) }}
-                      </span>
-                    </div>
+                    <button
+                      v-if="!isJournalOpen(journal)"
+                      class="journal-collapsed"
+                      type="button"
+                      @click="toggleJournal(journal)"
+                    >
+                      <span class="journal-preview">{{ notePreview(journal) }}</span>
+                    </button>
 
-                    <div v-if="journal.notes" class="journal-note">
-                      <MarkdownBody :source="journal.notes" />
-                    </div>
+                    <template v-else>
+                      <div v-if="journal.details?.length" class="journal-changes">
+                        <span v-for="(detail, index) in journal.details" :key="index" class="journal-change">
+                          {{ detailText(detail) }}
+                        </span>
+                      </div>
+
+                      <div v-if="editingJournalId === journal.id" class="journal-edit">
+                        <textarea
+                          v-model="journalDraft"
+                          class="textarea journal-edit-textarea"
+                          rows="6"
+                          @keydown.esc="cancelJournalEdit"
+                        ></textarea>
+                        <p v-if="journalEditError" class="composer-error" role="alert">
+                          {{ journalEditError }}
+                        </p>
+                        <div class="journal-edit-actions">
+                          <button class="btn btn-sm" type="button" @click="cancelJournalEdit">
+                            Annuler
+                          </button>
+                          <button
+                            class="btn btn-primary btn-sm"
+                            type="button"
+                            :disabled="savingJournalId === journal.id"
+                            @click="saveJournalEdit(journal)"
+                          >
+                            <Loader2 v-if="savingJournalId === journal.id" :size="13" class="spin" />
+                            Enregistrer
+                          </button>
+                        </div>
+                      </div>
+                      <div v-else class="journal-note">
+                        <MarkdownBody :source="journal.notes" />
+                      </div>
+                    </template>
+                  </div>
+
+                  <div v-else class="journal-history-line">
+                    <span class="strong">{{ fullName(journal.user) }}</span>
+                    <span class="journal-history-text">{{ journalSummary(journal) }}</span>
+                    <span class="journal-history-time" :title="formatDateTime(journal.created_on)">
+                      {{ relativeTime(journal.created_on) }}
+                    </span>
                   </div>
                 </article>
               </div>
@@ -885,56 +1115,6 @@ onBeforeUnmount(() => {
                 title="Aucun commentaire"
                 :text="timelineNotesOnly ? 'Aucun commentaire pour le moment.' : 'Aucune activité enregistrée sur ce ticket.'"
               />
-            </div>
-
-            <div class="composer">
-              <div class="composer-head">
-                <UserAvatar :user="session.user" :size="30" />
-                <div class="composer-title">
-                  <span class="strong">Ajouter un commentaire</span>
-                  <span v-if="draftSaved" class="draft-saved">Brouillon enregistré</span>
-                </div>
-              </div>
-              <textarea
-                v-model="comment"
-                class="textarea composer-textarea"
-                rows="4"
-                placeholder="Votre commentaire… (Textile ou Markdown accepté)"
-              ></textarea>
-              <ul v-if="commentFiles.length" class="comment-files">
-                <li v-for="(file, index) in commentFiles" :key="`${file.name}-${file.size}`">
-                  <Paperclip :size="12" />
-                  <span class="truncate">{{ file.name }}</span>
-                  <span class="faint text-xs">{{ formatFileSize(file.size) }}</span>
-                  <button type="button" class="file-remove" @click="removeCommentFile(index)">
-                    <X :size="12" />
-                  </button>
-                </li>
-              </ul>
-              <p v-if="commentError" class="composer-error" role="alert">{{ commentError }}</p>
-              <div class="composer-foot">
-                <label class="upload-button">
-                  <Paperclip :size="13" />
-                  Joindre
-                  <input type="file" multiple @change="onCommentFiles" />
-                </label>
-                <label class="checkbox private-check">
-                  <input v-model="privateNote" type="checkbox" />
-                  <Lock :size="12" />
-                  Note privée
-                </label>
-                <span class="spacer"></span>
-                <button
-                  class="btn btn-primary"
-                  type="button"
-                  :disabled="submittingComment || (!comment.trim() && !commentFiles.length)"
-                  @click="submitComment"
-                >
-                  <Loader2 v-if="submittingComment" :size="14" class="spin" />
-                  <Send v-else :size="14" />
-                  Commenter
-                </button>
-              </div>
             </div>
           </section>
           </template>
@@ -1118,6 +1298,63 @@ onBeforeUnmount(() => {
         </div>
 
         <aside class="detail-side">
+          <section id="comment-composer" class="card composer-card">
+            <header class="card-head">
+              <h2 class="card-title"><MessageSquarePlus :size="15" /> Ajouter un commentaire</h2>
+              <span v-if="draftSaved" class="draft-saved">Brouillon enregistré</span>
+            </header>
+            <div class="composer-body">
+              <div class="composer-head">
+                <UserAvatar :user="session.user" :size="26" />
+                <div class="composer-title">
+                  <span class="strong">{{ session.displayName || 'Vous' }}</span>
+                  <span class="faint text-xs">Textile ou Markdown accepté</span>
+                </div>
+              </div>
+              <textarea
+                id="issue-comment-input"
+                v-model="comment"
+                class="textarea composer-textarea"
+                rows="5"
+                placeholder="Votre commentaire…"
+              ></textarea>
+              <ul v-if="commentFiles.length" class="comment-files">
+                <li v-for="(file, index) in commentFiles" :key="`${file.name}-${file.size}`">
+                  <Paperclip :size="12" />
+                  <span class="truncate">{{ file.name }}</span>
+                  <span class="faint text-xs">{{ formatFileSize(file.size) }}</span>
+                  <button type="button" class="file-remove" @click="removeCommentFile(index)">
+                    <X :size="12" />
+                  </button>
+                </li>
+              </ul>
+              <p v-if="commentError" class="composer-error" role="alert">{{ commentError }}</p>
+              <div class="composer-foot">
+                <label class="upload-button">
+                  <Paperclip :size="13" />
+                  Joindre
+                  <input type="file" multiple @change="onCommentFiles" />
+                </label>
+                <label class="checkbox private-check">
+                  <input v-model="privateNote" type="checkbox" />
+                  <Lock :size="12" />
+                  Note privée
+                </label>
+                <span class="spacer"></span>
+                <button
+                  class="btn btn-primary"
+                  type="button"
+                  :disabled="submittingComment || (!comment.trim() && !commentFiles.length)"
+                  @click="submitComment"
+                >
+                  <Loader2 v-if="submittingComment" :size="14" class="spin" />
+                  <Send v-else :size="14" />
+                  Commenter
+                </button>
+              </div>
+            </div>
+          </section>
+
           <section class="card properties-card">
             <header class="card-head">
               <h2 class="card-title">Propriétés</h2>
@@ -1556,6 +1793,10 @@ onBeforeUnmount(() => {
   gap: 15px;
   position: sticky;
   top: calc(var(--topbar-h) + 14px);
+  max-height: calc(100vh - var(--topbar-h) - 28px);
+  overflow-y: auto;
+  padding-right: 2px;
+  scrollbar-width: thin;
 }
 
 .description-card .card-body {
@@ -1605,6 +1846,47 @@ onBeforeUnmount(() => {
 
 .activity-head {
   flex-wrap: wrap;
+  gap: 8px;
+}
+
+.activity-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.journal-sort {
+  min-height: 29px;
+  gap: 5px;
+  padding: 0 8px;
+  color: var(--muted);
+}
+
+.journal-sort span {
+  font-size: 10.5px;
+}
+
+.journal-tool {
+  width: 29px;
+  height: 29px;
+  color: var(--faint);
+}
+
+.journal-tool:hover {
+  color: var(--ink);
+  background: var(--surface-3);
+}
+
+.comment-jump {
+  min-height: 29px;
+  gap: 5px;
+  margin-left: 3px;
+}
+
+.sprint-pill {
+  gap: 4px;
+  flex: none;
 }
 
 .timeline {
@@ -1640,14 +1922,149 @@ onBeforeUnmount(() => {
 .timeline-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   flex-wrap: wrap;
   font-size: 11.5px;
+}
+
+.journal-toggle {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-left: -4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--faint);
+  flex: none;
+}
+
+.journal-toggle:hover {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+
+.journal-toggle svg {
+  transition: transform 140ms var(--ease);
+}
+
+.journal-toggle svg.is-open {
+  transform: rotate(90deg);
+}
+
+.journal-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 23px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 550;
+  opacity: 0;
+  transition: opacity var(--transition), background var(--transition), color var(--transition);
+}
+
+.timeline-item:hover .journal-edit-btn,
+.journal-edit-btn:focus-visible {
+  opacity: 1;
+}
+
+.journal-edit-btn:hover {
+  border-color: var(--line);
+  background: var(--surface-3);
+  color: var(--ink);
+}
+
+.journal-collapsed {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.journal-preview {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.journal-collapsed:hover .journal-preview {
+  color: var(--ink-soft);
 }
 
 .timeline-time {
   color: var(--faint);
   font-size: 10.5px;
+}
+
+.timeline-item.is-history {
+  align-items: center;
+  gap: 7px;
+  padding: 5px 18px;
+  border-bottom-color: color-mix(in srgb, var(--line) 64%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 35%, transparent);
+}
+
+.timeline-item.is-history .timeline-rail {
+  padding-top: 0;
+  opacity: 0.75;
+}
+
+.journal-history-line {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  flex: 1;
+  flex-wrap: wrap;
+  min-width: 0;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.journal-history-line .strong {
+  font-size: 10.5px;
+}
+
+.journal-history-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.journal-history-time {
+  margin-left: auto;
+  color: var(--faint);
+  font-size: 9.5px;
+  white-space: nowrap;
+}
+
+.journal-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 7px;
+}
+
+.journal-edit-textarea {
+  min-height: 120px;
+  background: var(--surface);
+}
+
+.journal-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .private-badge {
@@ -1690,12 +2107,13 @@ onBeforeUnmount(() => {
   font-size: 12.5px;
 }
 
-.composer {
-  margin: 6px 16px 16px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface-2);
+.composer-card .card-head {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.composer-body {
+  padding: 12px 16px 16px;
 }
 
 .composer-head {
@@ -1707,9 +2125,11 @@ onBeforeUnmount(() => {
 
 .composer-title {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
+  font-size: 11.5px;
 }
 
 .draft-saved {
@@ -2185,6 +2605,12 @@ select.property-control {
   flex: none;
 }
 
+@media (hover: none) {
+  .journal-edit-btn {
+    opacity: 1;
+  }
+}
+
 .detail-tabs {
   display: flex;
   align-items: center;
@@ -2259,8 +2685,12 @@ select.property-control {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     align-items: start;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
   }
-  .properties-card {
+  .properties-card,
+  .composer-card {
     grid-column: span 2;
   }
 }
@@ -2276,8 +2706,18 @@ select.property-control {
   .detail-side {
     grid-template-columns: minmax(0, 1fr);
   }
-  .properties-card {
+  .properties-card,
+  .composer-card {
     grid-column: auto;
+  }
+  .activity-tools {
+    width: 100%;
+  }
+  .comment-jump {
+    margin-left: auto;
+  }
+  .journal-edit-btn {
+    opacity: 1;
   }
   .time-summary {
     grid-template-columns: repeat(3, minmax(0, 1fr));

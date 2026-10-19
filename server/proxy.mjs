@@ -7,6 +7,8 @@ const FORWARDED_REQUEST_HEADERS = [
   'content-type',
   'accept',
   'content-length',
+  'cookie',
+  'x-requested-with',
 ]
 const FORWARDED_RESPONSE_HEADERS = [
   'content-type',
@@ -67,6 +69,16 @@ export function createRedmineProxy({ prefix = PREFIX } = {}) {
     const headers = {}
     for (const name of FORWARDED_REQUEST_HEADERS) {
       if (req.headers[name] !== undefined) headers[name] = req.headers[name]
+    }
+    // Les cookies ne sont transmis que si Redmine est hébergé sur le même
+    // nom d'hôte que l'application. Cela permet d'utiliser la session web
+    // Redmine (nécessaire pour éditer un commentaire en 3.4) sans envoyer
+    // les cookies de l'application à une instance distante arbitraire.
+    const requestHost = String(req.headers.host || '')
+      .replace(/:\d+$/, '')
+      .toLowerCase()
+    if (requestHost && targetUrl.hostname.toLowerCase() !== requestHost) {
+      delete headers.cookie
     }
     headers.host = targetUrl.host
     headers['user-agent'] = 'RedmineStudio/1.0'

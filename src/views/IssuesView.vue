@@ -6,6 +6,7 @@ import {
   Inbox,
   LayoutList,
   Loader2,
+  Milestone,
   Plus,
   RefreshCw,
   Search,
@@ -17,7 +18,7 @@ import { useSessionStore } from '../stores/session.js'
 import { useToastStore } from '../stores/toast.js'
 import { useUiStore } from '../stores/ui.js'
 import { useRefreshStore } from '../stores/refresh.js'
-import { formatDate, isOverdue, relativeTime, toIsoDate } from '../lib/format.js'
+import { formatDate, isOverdue, issueSprint, relativeTime, toIsoDate } from '../lib/format.js'
 import { statusTone } from '../lib/constants.js'
 import IssueRow from '../components/IssueRow.vue'
 import StatusBadge from '../components/StatusBadge.vue'
@@ -101,6 +102,10 @@ const boardColumns = computed(() => {
 
 function issuesForStatus(statusId) {
   return issues.value.filter((issue) => issue.status?.id === statusId)
+}
+
+function sprintOf(issue) {
+  return issueSprint(issue)
 }
 
 function readQuery(query) {
@@ -654,6 +659,9 @@ watch(() => refresh.issueVersion, () => load())
                 <PriorityBadge :priority="issue.priority" :show-label="false" />
               </div>
               <p class="board-card-subject">{{ issue.subject }}</p>
+              <span v-if="sprintOf(issue)" class="board-card-sprint" :title="sprintOf(issue).label">
+                <Milestone :size="10" /> {{ sprintOf(issue).value }}
+              </span>
               <div class="board-card-meta">
                 <span class="truncate">{{ issue.project?.name }}</span>
                 <span
@@ -1039,6 +1047,28 @@ watch(() => refresh.issueVersion, () => load())
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.board-card-sprint {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  max-width: 100%;
+  height: 17px;
+  margin-top: 5px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--violet-soft);
+  color: var(--violet);
+  font-size: 9px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-card-sprint svg {
+  flex: none;
 }
 
 .board-card-meta {

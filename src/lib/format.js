@@ -123,6 +123,44 @@ export function parseHoursInput(input) {
   return Math.round(value * 100) / 100
 }
 
+const SPRINT_FIELD_PATTERN = /(?:^|[^a-z])(sprint|iteration|itération|cycle)(?:[^a-z]|$)/i
+
+/**
+ * Récupère le sprint d'un ticket, qu'il provienne d'un champ personnalisé
+ * (« Sprint », « Itération »…) ou d'une version nommée comme un sprint.
+ */
+export function issueSprint(issue) {
+  const fields = Array.isArray(issue?.custom_fields) ? issue.custom_fields : []
+  const field = fields.find((item) => {
+    if (!SPRINT_FIELD_PATTERN.test(item?.name || '')) return false
+    if (Array.isArray(item.value)) return item.value.some((value) => String(value ?? '').trim())
+    return item.value !== null && item.value !== undefined && String(item.value).trim() !== ''
+  })
+  if (field) {
+    const value = Array.isArray(field.value)
+      ? field.value.map((item) => String(item).trim()).filter(Boolean).join(', ')
+      : String(field.value).trim()
+    return { label: field.name || 'Sprint', value }
+  }
+
+  const version = issue?.fixed_version
+  if (version?.name && /sprint|iteration|itération/i.test(version.name)) {
+    return { label: 'Sprint', value: version.name }
+  }
+  return null
+}
+
+/** Version texte courte d'un contenu Textile/Markdown, pour les aperçus. */
+export function plainText(value = '') {
+  return String(value)
+    .replace(/```[\s\S]*?```/g, ' [code] ')
+    .replace(/!([^!]*)!/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/[*_~`#>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export function formatFileSize(bytes) {
   const value = Number(bytes) || 0
   if (value < 1024) return `${value} o`

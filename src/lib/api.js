@@ -30,7 +30,7 @@ export class RedmineApi {
     return headers
   }
 
-  async request(path, { method = 'GET', query, body, signal, headers } = {}) {
+  buildUrl(path, query) {
     let url = PREFIX + (path.startsWith('/') ? path : `/${path}`)
     if (query) {
       const params = new URLSearchParams()
@@ -41,6 +41,11 @@ export class RedmineApi {
       const qs = params.toString()
       if (qs) url += `?${qs}`
     }
+    return url
+  }
+
+  async request(path, { method = 'GET', query, body, signal, headers } = {}) {
+    const url = this.buildUrl(path, query)
 
     let response
     try {
@@ -97,6 +102,58 @@ export class RedmineApi {
     }
 
     return data
+  }
+
+  /**
+   * Requête texte/HTML, utilisée pour les routes web de Redmine
+   * (notamment le formulaire d'édition d'un commentaire).
+   */
+  async textRequest(path, { method = 'GET', query, body, signal, headers } = {}) {
+    const url = this.buildUrl(path, query)
+    let response
+    try {
+      response = await fetch(url, {
+        method,
+        signal,
+        headers: this.headers(headers),
+        body,
+      })
+    } catch (error) {
+      if (error.name === 'AbortError') throw error
+      throw new ApiError(
+        'Impossible de contacter le proxy local. Vérifiez que le serveur est démarré.',
+        { path },
+      )
+    }
+
+    const text = await response.text()
+    if (!response.ok) {
+      let data = null
+      if (text) {
+        try {
+          data = JSON.parse(text)
+        } catch {
+          /* réponse HTML ou vide */
+        }
+      }
+      const errors = Array.isArray(data?.errors)
+        ? data.errors
+        : typeof data?.error === 'string'
+          ? [data.error]
+          : []
+      const message = errors.length
+        ? errors.join(' · ')
+        : response.status === 401
+          ? 'Session Redmine requise.'
+          : response.status === 403
+            ? "Vous n'avez pas les droits pour cette action."
+            : response.status === 404
+              ? 'Formulaire de modification introuvable sur Redmine.'
+              : `Erreur Redmine (${response.status}).`
+      throw new ApiError(message, { status: response.status, errors, path })
+    }
+
+    return { response, text }
   }
 
   async testConnection() {
@@ -181,6 +238,46 @@ export class RedmineApi {
     })
   }
 
+  /**
+   * Modifie une note via la route web `/journals/:id/edit` de Redmine.
+   * Redmine 3.4 ne possède pas d'endpoint REST pour les journaux : le
+   * formulaire HTML est donc récupéré pour récupérer le jeton CSRF, puis
+   * soumis comme le ferait l'interface Redmine.
+   */
+  async updateJournal(id, { notes, privateNotes = false } = {}) {
+    const { text } = await this.textRequest(`/journals/${id}/edit.js`, {
+      headers: {
+        Accept: 'text/javascript, text/html, application/xhtml+xml',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    })
+    const token = extractAuthenticityToken(text)
+    const hasJournalForm =
+      new RegExp(`journal[-_]${id}[-_]`).test(text) && text.includes('journal[notes]')
+    if (!token || !hasJournalForm) {
+      throw new ApiError(
+        "Redmine n'a pas renvoyé le formulaire de modification. Une session web Redmine active est nécessaire pour modifier un commentaire avec Redmine 3.4.",
+        { status: 401, path: `/journals/${id}/edit` },
+      )
+    }
+
+    const body = new URLSearchParams()
+    body.set('_method', 'put')
+    body.set('authenticity_token', token)
+    body.set('journal[notes]', notes)
+    body.set('journal[private_notes]', privateNotes ? '1' : '0')
+
+    await this.textRequest(`/journals/${id}`, {
+      method: 'POST',
+      body,
+      headers: {
+        Accept: 'text/javascript, text/html, application/xhtml+xml',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    })
+    return true
+  }
+
   projectVersions(projectId) {
     return this.request(`/projects/${projectId}/versions.json`, {
       query: { limit: 100 },
@@ -249,6 +346,24 @@ export class RedmineApi {
     }
     return response.blob()
   }
+}
+
+function extractAuthenticityToken(source = '') {
+  const normalized = String(source)
+    .replace(/\\"/g, '"')
+    .replace(/\\'/g, "'")
+    .replace(/\\u0022/gi, '"')
+    .replace(/\\u0027/gi, "'")
+    .replace(/&quot;/g, '"')
+  const patterns = [
+    /name=["']authenticity_token["'][^>]*value=["']([^"']+)["']/i,
+    /value=["']([^"']+)["'][^>]*name=["']authenticity_token["']/i,
+  ]
+  for (const pattern of patterns) {
+    const match = pattern.exec(normalized)
+    if (match?.[1]) return match[1]
+  }
+  return ''
 }
 
 /** Construit une URL de fichier locale pour un téléchargement. */
