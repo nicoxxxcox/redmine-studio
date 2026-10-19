@@ -1413,7 +1413,7 @@ ol {
 
 .issues-grid {
   display: grid;
-  grid-template-columns: 76px minmax(220px, 1fr) 124px 104px 156px 104px 104px;
+  grid-template-columns: 76px minmax(220px, 1fr) 124px 104px 156px 132px 104px;
   align-items: center;
   gap: 12px;
 }
@@ -1438,7 +1438,7 @@ ol {
 
 @media (max-width: 1240px) {
   .issues-grid {
-    grid-template-columns: 76px minmax(200px, 1fr) 120px 96px 148px 100px;
+    grid-template-columns: 76px minmax(200px, 1fr) 120px 96px 148px 120px;
   }
   .issue-table-head .col-updated,
   .issue-row .row-updated {
@@ -1448,7 +1448,7 @@ ol {
 
 @media (max-width: 1040px) {
   .issues-grid {
-    grid-template-columns: 76px minmax(200px, 1fr) 120px 140px 100px;
+    grid-template-columns: 76px minmax(200px, 1fr) 120px 140px 120px;
   }
   .issue-table-head .col-priority,
   .issue-row .row-priority {
@@ -1462,8 +1462,8 @@ ol {
   }
   .issue-table-head .col-assignee,
   .issue-row .row-assignee,
-  .issue-table-head .col-due,
-  .issue-row .row-due {
+  .issue-table-head .col-sprint,
+  .issue-row .row-sprint {
     display: none;
   }
   .issue-row {

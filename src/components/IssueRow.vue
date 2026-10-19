@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { CalendarClock, Milestone } from 'lucide-vue-next'
+import { Milestone } from 'lucide-vue-next'
 import {
   formatDate,
   formatDateTime,
@@ -47,14 +47,14 @@ const assigneeName = computed(() => {
         <span v-if="issue.tracker" class="tracker-name">
           <span class="meta-sep">·</span>{{ issue.tracker.name }}
         </span>
-        <span v-if="sprint" class="sprint-chip" :title="sprint.label">
-          <Milestone :size="10" />
-          {{ sprint.value }}
-        </span>
         <span v-if="issue.spent_hours" class="meta-hours">{{ formatHours(issue.spent_hours) }}</span>
       </span>
       <span class="row-mobile-meta">
         <StatusBadge :status="issue.status" />
+        <span v-if="sprint" class="sprint-chip" :title="sprint.label">
+          <Milestone :size="10" />
+          <span class="truncate">{{ sprint.value }}</span>
+        </span>
         <span v-if="assigneeName" class="mobile-assignee">{{ assigneeName }}</span>
         <span v-if="issue.due_date" :class="{ 'due-overdue': overdue }">
           {{ formatDate(issue.due_date, { year: undefined }) }}
@@ -83,9 +83,12 @@ const assigneeName = computed(() => {
       <span v-else class="unassigned">Non assigné</span>
     </span>
 
-    <span class="row-due" :class="{ 'due-overdue': overdue }" :title="issue.due_date ? 'Échéance' : ''">
-      <CalendarClock v-if="overdue" :size="13" />
-      <span>{{ issue.due_date ? formatDate(issue.due_date) : '—' }}</span>
+    <span class="row-sprint">
+      <span v-if="sprint" class="sprint-chip" :title="sprint.label">
+        <Milestone :size="10" />
+        <span class="truncate">{{ sprint.value }}</span>
+      </span>
+      <span v-else class="row-empty" title="Aucun sprint">—</span>
     </span>
 
     <span class="row-updated" :title="formatDateTime(issue.updated_on)">
@@ -183,7 +186,7 @@ const assigneeName = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  max-width: 140px;
+  max-width: 100%;
   height: 17px;
   padding: 0 6px;
   border-radius: 999px;
@@ -239,18 +242,15 @@ const assigneeName = computed(() => {
   font-size: 11px;
 }
 
-.row-due {
+.row-sprint {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--muted);
-  white-space: nowrap;
+  min-width: 0;
 }
 
-.row-due.due-overdue {
-  color: var(--red);
-  font-weight: 600;
+.row-empty {
+  color: var(--faint);
+  font-size: 11px;
 }
 
 .row-updated {
