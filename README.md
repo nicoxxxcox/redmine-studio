@@ -12,8 +12,8 @@ toutes les requêtes passent par le petit proxy same-origin intégré à l'appli
 - **Tableau de bord** : tickets assignés, retards, tickets créés, temps de la semaine, activité
   récente.
 - **Tickets** : liste filtrable (projet, statut, assigné, priorité, tracker, auteur, retard,
-  recherche), numéro copiable en un clic, sprint visible dans la liste et le kanban, tableau
-  kanban avec changement de statut par glisser-déposer.
+  recherche), numéro copiable en un clic, une couleur distincte par statut, sprint visible
+  dans la liste et le kanban, tableau kanban avec changement de statut par glisser-déposer.
 - **Détail d'un ticket** : sujet et description éditables, propriétés (statut, priorité,
   assigné, tracker, version, dates, estimation, avancement), suivi (watchers), relations et
   sous-tickets, pièces jointes.

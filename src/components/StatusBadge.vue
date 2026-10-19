@@ -1,17 +1,20 @@
 <script setup>
 import { computed } from 'vue'
-import { statusTone } from '../lib/constants.js'
+import { statusHue } from '../lib/constants.js'
+import { useSessionStore } from '../stores/session.js'
 
 const props = defineProps({
   status: { type: Object, default: null },
   label: { type: String, default: '' },
 })
 
-const tone = computed(() => statusTone(props.status))
+const session = useSessionStore()
+const hue = computed(() => statusHue(props.status, session.statuses))
+const badgeStyle = computed(() => (hue.value === null ? {} : { '--status-hue': hue.value }))
 </script>
 
 <template>
-  <span class="badge" :data-tone="tone">
+  <span class="badge" :class="{ 'status-badge': hue !== null }" :style="badgeStyle">
     {{ label || status?.name || '—' }}
   </span>
 </template>

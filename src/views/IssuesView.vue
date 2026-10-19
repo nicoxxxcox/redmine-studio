@@ -19,7 +19,7 @@ import { useToastStore } from '../stores/toast.js'
 import { useUiStore } from '../stores/ui.js'
 import { useRefreshStore } from '../stores/refresh.js'
 import { formatDate, isOverdue, issueSprint, relativeTime, toIsoDate } from '../lib/format.js'
-import { statusTone } from '../lib/constants.js'
+import { statusHue } from '../lib/constants.js'
 import IssueId from '../components/IssueId.vue'
 import IssueRow from '../components/IssueRow.vue'
 import StatusBadge from '../components/StatusBadge.vue'
@@ -100,6 +100,11 @@ const boardColumns = computed(() => {
   }
   return columns
 })
+
+function statusDotStyle(status) {
+  const hue = statusHue(status, session.statuses)
+  return hue === null ? {} : { '--status-hue': hue }
+}
 
 function issuesForStatus(statusId) {
   return issues.value.filter((issue) => issue.status?.id === statusId)
@@ -629,7 +634,7 @@ watch(() => refresh.issueVersion, () => load())
           @drop.prevent="onDrop(status)"
         >
           <header class="board-column-head">
-            <span class="board-status-dot" :data-tone="statusTone(status)"></span>
+            <span class="board-status-dot" :style="statusDotStyle(status)"></span>
             <span class="board-column-name">{{ status.name }}</span>
             <span class="board-count">{{ issuesForStatus(status.id).length }}</span>
             <button
@@ -934,23 +939,11 @@ watch(() => refresh.issueVersion, () => load())
   height: 7px;
   border-radius: 50%;
   flex: none;
-  background: var(--slate);
+  background: hsl(var(--status-hue, 210) 62% 42%);
 }
 
-.board-status-dot[data-tone='blue'] {
-  background: var(--blue);
-}
-.board-status-dot[data-tone='amber'] {
-  background: var(--amber);
-}
-.board-status-dot[data-tone='green'] {
-  background: var(--green);
-}
-.board-status-dot[data-tone='violet'] {
-  background: var(--violet);
-}
-.board-status-dot[data-tone='red'] {
-  background: var(--red);
+:global([data-theme='dark'] .board-status-dot) {
+  background: hsl(var(--status-hue, 210) 72% 64%);
 }
 
 .board-column-name {
