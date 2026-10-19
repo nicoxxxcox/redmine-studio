@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Loader2, Search, Ticket, X } from 'lucide-vue-next'
 import { useSettingsStore } from '../stores/settings.js'
+import IssueId from './IssueId.vue'
 import StatusBadge from './StatusBadge.vue'
 
 const props = defineProps({
@@ -142,7 +143,7 @@ onBeforeUnmount(() => {
     <div v-if="selected" class="picker-selected">
       <span class="picker-selected-icon"><Ticket :size="15" /></span>
       <span class="picker-selected-text">
-        <span class="picker-selected-id mono">#{{ selected.id }}</span>
+        <IssueId :id="selected.id" class="picker-selected-id" always />
         <span class="picker-selected-subject truncate">{{ subjectOf(selected) }}</span>
         <span v-if="selected.project?.name" class="picker-selected-project truncate">
           {{ selected.project.name }}

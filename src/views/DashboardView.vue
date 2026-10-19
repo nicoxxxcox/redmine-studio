@@ -33,6 +33,7 @@ import {
   startOfWeek,
   toIsoDate,
 } from '../lib/format.js'
+import IssueId from '../components/IssueId.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import PriorityBadge from '../components/PriorityBadge.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -283,7 +284,7 @@ watch(() => refresh.timeVersion, load)
             @click="router.push({ name: 'issue', params: { id: issue.id } })"
             @keydown.enter="router.push({ name: 'issue', params: { id: issue.id } })"
           >
-            <span class="priority-id mono">#{{ issue.id }}</span>
+            <IssueId :id="issue.id" class="priority-id" />
             <div class="priority-main">
               <span class="priority-subject truncate">{{ issue.subject }}</span>
               <span class="priority-meta">
@@ -407,7 +408,7 @@ watch(() => refresh.timeVersion, load)
           :to="{ name: 'issue', params: { id: issue.id } }"
           class="recent-item"
         >
-          <span class="recent-id mono">#{{ issue.id }}</span>
+          <IssueId :id="issue.id" class="recent-id" />
           <span class="recent-subject truncate">{{ issue.subject }}</span>
           <span class="recent-project truncate">{{ issue.project?.name }}</span>
           <StatusBadge :status="issue.status" />
@@ -623,7 +624,7 @@ watch(() => refresh.timeVersion, load)
 .priority-id {
   font-size: 10.5px;
   color: var(--faint);
-  width: 44px;
+  min-width: 44px;
   flex: none;
 }
 

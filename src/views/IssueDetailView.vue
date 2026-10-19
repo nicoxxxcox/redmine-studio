@@ -51,6 +51,8 @@ import {
   toIsoDate,
 } from '../lib/format.js'
 import { saveBlob, ApiError } from '../lib/api.js'
+import { copyText } from '../lib/clipboard.js'
+import IssueId from '../components/IssueId.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import PriorityBadge from '../components/PriorityBadge.vue'
 import UserAvatar from '../components/UserAvatar.vue'
@@ -703,10 +705,9 @@ function startTimer() {
 }
 
 async function copyLink() {
-  try {
-    await navigator.clipboard.writeText(window.location.href)
+  if (await copyText(window.location.href)) {
     toast.success('Lien du ticket copié.')
-  } catch {
+  } else {
     toast.error('Copie impossible dans ce navigateur.')
   }
 }
@@ -855,7 +856,7 @@ onBeforeUnmount(() => {
         <span class="crumb-sep">/</span>
         <span class="crumb-project">{{ issue.project?.name }}</span>
         <span class="crumb-sep">/</span>
-        <span class="mono crumb-id">#{{ issue.id }}</span>
+        <IssueId :id="issue.id" class="crumb-id" />
         <span v-if="reloading" class="crumb-loading"><Loader2 :size="12" class="spin" /></span>
       </div>
 
@@ -888,7 +889,7 @@ onBeforeUnmount(() => {
             <button class="btn btn-sm" type="button" @click="editingSubject = false">Annuler</button>
           </div>
           <h1 v-else class="detail-title">
-            <span class="detail-id mono">#{{ issue.id }}</span>
+            <IssueId :id="issue.id" class="detail-id" always />
             <span>{{ issue.subject }}</span>
             <button
               class="title-edit"
@@ -1308,7 +1309,7 @@ onBeforeUnmount(() => {
                   class="relation-row"
                 >
                   <span class="relation-type">{{ relationInfo(relation).label }}</span>
-                  <span class="mono">#{{ relationInfo(relation).otherId }}</span>
+                  <IssueId :id="relationInfo(relation).otherId" />
                   <span v-if="relation.delay" class="faint text-xs">délai {{ relation.delay }} j</span>
                   <ExternalLink :size="12" class="relation-arrow" />
                 </RouterLink>
@@ -1324,7 +1325,7 @@ onBeforeUnmount(() => {
                     :to="{ name: 'issue', params: { id: child.id } }"
                     class="relation-row"
                   >
-                    <span class="mono">#{{ child.id }}</span>
+                    <IssueId :id="child.id" />
                     <span class="truncate">{{ child.subject }}</span>
                     <span class="tag">{{ child.tracker?.name }}</span>
                   </RouterLink>

@@ -20,6 +20,7 @@ import { useUiStore } from '../stores/ui.js'
 import { useRefreshStore } from '../stores/refresh.js'
 import { formatDate, isOverdue, issueSprint, relativeTime, toIsoDate } from '../lib/format.js'
 import { statusTone } from '../lib/constants.js'
+import IssueId from '../components/IssueId.vue'
 import IssueRow from '../components/IssueRow.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import PriorityBadge from '../components/PriorityBadge.vue'
@@ -655,7 +656,7 @@ watch(() => refresh.issueVersion, () => load())
               @keydown.enter="router.push({ name: 'issue', params: { id: issue.id } })"
             >
               <div class="board-card-top">
-                <span class="board-card-id mono">#{{ issue.id }}</span>
+                <IssueId :id="issue.id" class="board-card-id" />
                 <PriorityBadge :priority="issue.priority" :show-label="false" />
               </div>
               <p class="board-card-subject">{{ issue.subject }}</p>

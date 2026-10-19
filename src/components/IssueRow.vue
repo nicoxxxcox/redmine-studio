@@ -9,6 +9,7 @@ import {
   issueSprint,
   relativeTime,
 } from '../lib/format.js'
+import IssueId from './IssueId.vue'
 import StatusBadge from './StatusBadge.vue'
 import PriorityBadge from './PriorityBadge.vue'
 import UserAvatar from './UserAvatar.vue'
@@ -33,7 +34,7 @@ const assigneeName = computed(() => {
     class="issue-row issues-grid"
     :class="{ 'is-overdue': overdue, 'is-compact': compact }"
   >
-    <span class="row-id mono">#{{ issue.id }}</span>
+    <IssueId :id="issue.id" class="row-id" />
 
     <span class="row-subject">
       <span class="subject-line">{{ issue.subject }}</span>

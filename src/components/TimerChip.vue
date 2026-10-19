@@ -4,6 +4,7 @@ import { Square, Timer } from 'lucide-vue-next'
 import { useTimerStore } from '../stores/timer.js'
 import { useUiStore } from '../stores/ui.js'
 import { toIsoDate } from '../lib/format.js'
+import IssueId from './IssueId.vue'
 
 const timerStore = useTimerStore()
 const ui = useUiStore()
@@ -50,7 +51,7 @@ function stop() {
     <span class="timer-live" aria-hidden="true"></span>
     <Timer :size="14" class="timer-icon" />
     <span class="timer-time">{{ elapsed }}</span>
-    <span class="timer-subject">#{{ timerStore.timer.issueId }}</span>
+    <IssueId :id="timerStore.timer.issueId" class="timer-subject" />
     <button class="timer-stop" type="button" title="Arrêter et saisir le temps" @click="stop">
       <Square :size="11" fill="currentColor" />
       <span>Arrêter</span>

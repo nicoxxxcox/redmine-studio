@@ -27,6 +27,7 @@ import {
   toIsoDate,
 } from '../lib/format.js'
 import EmptyState from '../components/EmptyState.vue'
+import IssueId from '../components/IssueId.vue'
 
 const settings = useSettingsStore()
 const session = useSessionStore()
@@ -282,7 +283,7 @@ onMounted(load)
                     :to="{ name: 'issue', params: { id: entry.issue.id } }"
                     class="time-issue-link"
                   >
-                    <span class="mono time-issue-id">#{{ entry.issue.id }}</span>
+                    <IssueId :id="entry.issue.id" class="time-issue-id" />
                     <span class="truncate">{{ entryIssue(entry)?.subject || `Ticket #${entry.issue.id}` }}</span>
                   </RouterLink>
                   <span v-else class="time-issue-link muted">
