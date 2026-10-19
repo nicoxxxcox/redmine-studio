@@ -185,16 +185,18 @@ function apiParams(offset = 0) {
 
 async function load({ append = false } = {}) {
   const sequence = ++requestSequence
+  const offset = append ? issues.value.length : 0
   if (append) loadingMore.value = true
   else loading.value = true
   error.value = ''
 
   try {
-    const data = await settings.api.issues(apiParams(append ? issues.value.length : 0))
+    const data = await settings.api.issues(apiParams(offset))
     if (sequence !== requestSequence) return
     const list = data?.issues || []
     issues.value = append ? [...issues.value, ...list] : list
     total.value = data?.total_count ?? list.length
+    enrichSprints(list, offset, sequence)
   } catch (err) {
     if (sequence !== requestSequence) return
     error.value = err?.message || 'Impossible de charger les tickets.'
@@ -207,6 +209,29 @@ async function load({ append = false } = {}) {
       loading.value = false
       loadingMore.value = false
     }
+  }
+}
+
+/**
+ * L'API REST Redmine n'expose pas le sprint du plugin Scrum. On complète donc
+ * les tickets à partir de la page HTML de la liste (colonne « Sprint »), sans
+ * bloquer l'affichage et sans écraser le repli « version cible ».
+ */
+async function enrichSprints(list, offset, sequence) {
+  if (!list.length) return
+  const ids = new Set(list.map((issue) => issue.id))
+  try {
+    const sprints = await settings.api.webIssueSprints(apiParams(offset))
+    if (sequence !== requestSequence) return
+    // On parcourt `issues.value` (et non la liste brute) pour que l'ajout du
+    // sprint passe par le proxy réactif et rafraîchisse immédiatement la vue.
+    for (const issue of issues.value) {
+      if (!ids.has(issue.id)) continue
+      const sprint = sprints.get(issue.id)
+      if (sprint) issue.sprint = sprint
+    }
+  } catch {
+    // Sprint indisponible : le repli sur la version cible reste appliqué.
   }
 }
 

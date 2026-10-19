@@ -13,8 +13,8 @@ toutes les requêtes passent par le petit proxy same-origin intégré à l'appli
   récente.
 - **Tickets** : liste filtrable (projet, statut, assigné, priorité, tracker, auteur, retard,
   recherche), changement de statut rapide depuis chaque ligne, numéro copiable en un clic, une
-  couleur distincte par statut, sprint visible dans la liste et le kanban, tableau kanban avec
-  changement de statut par glisser-déposer.
+  couleur distincte par statut, sprint (plugin Scrum, sinon version cible) visible dans la liste,
+  le kanban et le détail, tableau kanban avec changement de statut par glisser-déposer.
 - **Détail d'un ticket** : changement de statut rapide dans l'en-tête, sujet et description
   éditables, propriétés (statut, priorité, assigné, tracker, version, dates, estimation,
   avancement), suivi (watchers), relations et sous-tickets, pièces jointes.
@@ -186,6 +186,10 @@ Les raccourcis sont désactivés pendant la saisie dans un champ.
 - Les statuts autorisés (`allowed_statuses`) sont utilisés lorsqu'ils sont disponibles
   (Redmine récent) ; sinon tous les statuts de l'instance sont proposés.
 - Les watchers, relations, sous-tickets et pièces jointes sont pris en charge.
+- Le sprint du plugin **Scrum** (`issues.sprint_id`) n'est pas exposé par l'API REST de
+  Redmine 3.4. Redmine Studio le lit dans les pages HTML de la liste et du ticket, authentifiées
+  par la clé API, puis l'associe aux tickets. Sans sprint Scrum, la version cible
+  (`fixed_version`) reste utilisée comme libellé de repli.
 - Les champs personnalisés ne sont pas encore éditables.
 - Le rendu Textile/Markdown est volontairement léger : titres, listes, citations, gras, italique,
   code, liens, références `#123`. Il ne remplace pas le rendu complet de Redmine (tableaux,

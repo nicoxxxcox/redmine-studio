@@ -309,6 +309,7 @@ async function load({ silent = false } = {}) {
       descriptionDraft.value = issue.value.description || ''
       subjectDraft.value = issue.value.subject || ''
       restoreDraft()
+      enrichSprint(issue.value, sequence)
       await Promise.all([loadMembers(), loadVersions()])
     }
   } else {
@@ -324,6 +325,22 @@ async function load({ silent = false } = {}) {
 
   loading.value = false
   reloading.value = false
+}
+
+/**
+ * Le sprint du plugin Scrum n'est pas exposé par l'API REST : on le lit dans
+ * la page HTML du ticket (authentifiée par la clé API). Si l'API fournit déjà
+ * un sprint avec identifiant, on ne fait aucune requête supplémentaire.
+ */
+async function enrichSprint(target, sequence) {
+  if (!target || issueSprint(target)?.id) return
+  try {
+    const sprint = await settings.api.webIssueSprint(target.id)
+    if (sequence !== loadSequence || !issue.value) return
+    if (sprint) issue.value.sprint = sprint
+  } catch {
+    // Le repli sur la version cible reste utilisé si elle existe.
+  }
 }
 
 async function loadMembers() {

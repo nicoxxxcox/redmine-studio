@@ -36,7 +36,11 @@ export class RedmineApi {
       const params = new URLSearchParams()
       for (const [key, value] of Object.entries(query)) {
         if (value === undefined || value === null || value === '') continue
-        params.append(key, String(value))
+        // Les tableaux produisent des paramètres répétés (`c[]=id&c[]=sprint`).
+        for (const item of Array.isArray(value) ? value : [value]) {
+          if (item === undefined || item === null || item === '') continue
+          params.append(key, String(item))
+        }
       }
       const qs = params.toString()
       if (qs) url += `?${qs}`
@@ -223,6 +227,38 @@ export class RedmineApi {
     return this.request(`/issues/${id}.json`, { query: { include: [...includes].join(',') } })
   }
 
+  /**
+   * Le plugin Scrum stocke le sprint dans `issues.sprint_id`, mais l'API REST
+   * de Redmine 3.4 ne l'expose pas. On lit donc la page HTML de la liste
+   * (authentifiée par la clé API) pour récupérer le sprint affiché par ticket.
+   * Retourne une `Map` : identifiant du ticket → `{ id, name }`.
+   */
+  async webIssueSprints(params = {}) {
+    const perPage = Number(params.limit) > 0 ? Math.min(Number(params.limit), 100) : 50
+    const start = Number(params.offset) > 0 ? Number(params.offset) : 0
+    const query = { ...params }
+    delete query.limit
+    delete query.offset
+    delete query.include
+    query.set_filter = 1
+    query['c[]'] = ['id', 'sprint']
+    query.per_page = perPage
+    query.page = Math.floor(start / perPage) + 1
+    const { text } = await this.textRequest('/issues', {
+      query,
+      headers: { Accept: 'text/html,application/xhtml+xml' },
+    })
+    return parseIssueSprints(text)
+  }
+
+  /** Récupère le sprint affiché dans l'en-tête d'un ticket (page HTML). */
+  async webIssueSprint(issueId) {
+    const { text } = await this.textRequest(`/issues/${issueId}`, {
+      headers: { Accept: 'text/html,application/xhtml+xml' },
+    })
+    return parseIssueSprint(text)
+  }
+
   createIssue(issue) {
     return this.request('/issues.json', { method: 'POST', body: { issue } })
   }
@@ -357,6 +393,50 @@ export class RedmineApi {
     }
     return response.blob()
   }
+}
+
+const ISSUE_ROW_ID = /^issue-(\d+)$/
+const SPRINT_HREF = /\/sprints\/(\d+)/
+
+function parseHtmlDocument(html) {
+  if (!html || typeof DOMParser === 'undefined') return null
+  try {
+    return new DOMParser().parseFromString(String(html), 'text/html')
+  } catch {
+    return null
+  }
+}
+
+/** Lit un lien de sprint Redmine (`/sprints/123`) et son libellé. */
+function sprintFromAnchor(anchor) {
+  if (!anchor) return null
+  const name = String(anchor.textContent || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!name) return null
+  const match = SPRINT_HREF.exec(anchor.getAttribute('href') || '')
+  return match ? { id: Number(match[1]), name } : { name }
+}
+
+/** Extrait les sprints de la colonne « Sprint » de la liste HTML. */
+function parseIssueSprints(html) {
+  const sprints = new Map()
+  const doc = parseHtmlDocument(html)
+  if (!doc) return sprints
+  for (const row of doc.querySelectorAll('tr.issue')) {
+    const rowMatch = ISSUE_ROW_ID.exec(row.id || '')
+    if (!rowMatch) continue
+    const sprint = sprintFromAnchor(row.querySelector('td.sprint a'))
+    if (sprint) sprints.set(Number(rowMatch[1]), sprint)
+  }
+  return sprints
+}
+
+/** Extrait le sprint de l'en-tête d'un ticket (`div.sprint.attribute`). */
+function parseIssueSprint(html) {
+  const doc = parseHtmlDocument(html)
+  if (!doc) return null
+  return sprintFromAnchor(doc.querySelector('div.sprint.attribute a, td.sprint a'))
 }
 
 function extractAuthenticityToken(source = '') {
