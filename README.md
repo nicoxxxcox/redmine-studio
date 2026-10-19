@@ -17,8 +17,8 @@ toutes les requêtes passent par le petit proxy same-origin intégré à l'appli
 - **Détail d'un ticket** : sujet et description éditables, propriétés (statut, priorité,
   assigné, tracker, version, dates, estimation, avancement), suivi (watchers), relations et
   sous-tickets, pièces jointes.
-- **Discussion** : commentaires triables et repliables (les 3 derniers sont ouverts par
-  défaut), historique des modifications compact, édition des notes, notes privées,
+- **Discussion** : commentaires triables et repliables (les plus récents d'abord, les 3 derniers
+  ouverts par défaut), historique des modifications compact, édition des notes, notes privées,
   pièces jointes, collage d'une image du presse-papiers (`Ctrl+V` / `⌘+V`) et brouillons
   conservés localement.
 - **Composeur latéral** : l'ajout d'un commentaire se fait dans la colonne de droite, sans
