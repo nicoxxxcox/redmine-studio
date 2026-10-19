@@ -13,6 +13,7 @@ import {
   Copy,
   Download,
   ExternalLink,
+  FileImage,
   FileText,
   GitBranch,
   Loader2,
@@ -507,18 +508,83 @@ async function toggleWatch() {
   }
 }
 
-function onCommentFiles(event) {
-  const selected = Array.from(event.target.files || [])
-  for (const file of selected) {
+function addCommentFiles(files) {
+  let added = 0
+  for (const file of files) {
     if (file.size > 20 * 1024 * 1024) {
       toast.error(`« ${file.name} » dépasse 20 Mo.`)
       continue
     }
     if (!commentFiles.value.some((item) => item.name === file.name && item.size === file.size)) {
       commentFiles.value.push(file)
+      added += 1
     }
   }
+  return added
+}
+
+function onCommentFiles(event) {
+  addCommentFiles(Array.from(event.target.files || []))
   event.target.value = ''
+}
+
+function clipboardImages(event) {
+  const data = event.clipboardData
+  if (!data) return []
+  const items = Array.from(data.items || [])
+    .filter((item) => item.kind === 'file' && item.type?.startsWith('image/'))
+    .map((item) => item.getAsFile())
+    .filter(Boolean)
+  const files = items.length
+    ? items
+    : Array.from(data.files || []).filter((file) => file.type?.startsWith('image/'))
+  return files.map((file, index) => {
+    const type = file.type || 'image/png'
+    return new File([file], pastedImageName(type, index), {
+      type,
+      lastModified: Date.now(),
+    })
+  })
+}
+
+function pastedImageName(type, index) {
+  const now = new Date()
+  const stamp = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0'),
+    '-',
+    String(now.getHours()).padStart(2, '0'),
+    String(now.getMinutes()).padStart(2, '0'),
+    String(now.getSeconds()).padStart(2, '0'),
+    String(now.getMilliseconds()).padStart(3, '0'),
+  ].join('')
+  const subtype = (type.split('/')[1] || 'png').toLowerCase()
+  const extension =
+    subtype === 'jpeg'
+      ? 'jpg'
+      : subtype === 'svg+xml'
+        ? 'svg'
+        : subtype.replace(/[^a-z0-9]/g, '')
+  return `image-collee-${stamp}${index ? `-${index + 1}` : ''}.${extension || 'png'}`
+}
+
+function onCommentPaste(event) {
+  const files = clipboardImages(event)
+  if (!files.length) return
+  event.preventDefault()
+  const added = addCommentFiles(files)
+  if (added) {
+    toast.success(added > 1 ? `${added} images collées.` : 'Image collée dans le commentaire.')
+  }
+}
+
+function onJournalPaste(event) {
+  if (!clipboardImages(event).length) return
+  event.preventDefault()
+  toast.info(
+    "Redmine 3.4 ne permet pas d'ajouter une image à un commentaire existant. Ajoutez-la dans un nouveau commentaire.",
+  )
 }
 
 function removeCommentFile(index) {
@@ -1075,6 +1141,7 @@ onBeforeUnmount(() => {
                           class="textarea journal-edit-textarea"
                           rows="6"
                           @keydown.esc="cancelJournalEdit"
+                          @paste="onJournalPaste"
                         ></textarea>
                         <p v-if="journalEditError" class="composer-error" role="alert">
                           {{ journalEditError }}
@@ -1298,7 +1365,7 @@ onBeforeUnmount(() => {
         </div>
 
         <aside class="detail-side">
-          <section id="comment-composer" class="card composer-card">
+          <section id="comment-composer" class="card composer-card" @paste="onCommentPaste">
             <header class="card-head">
               <h2 class="card-title"><MessageSquarePlus :size="15" /> Ajouter un commentaire</h2>
               <span v-if="draftSaved" class="draft-saved">Brouillon enregistré</span>
@@ -1316,11 +1383,12 @@ onBeforeUnmount(() => {
                 v-model="comment"
                 class="textarea composer-textarea"
                 rows="5"
-                placeholder="Votre commentaire…"
+                placeholder="Votre commentaire… (Ctrl+V / Cmd+V pour coller une image)"
               ></textarea>
               <ul v-if="commentFiles.length" class="comment-files">
                 <li v-for="(file, index) in commentFiles" :key="`${file.name}-${file.size}`">
-                  <Paperclip :size="12" />
+                  <FileImage v-if="file.type?.startsWith('image/')" :size="12" />
+                  <Paperclip v-else :size="12" />
                   <span class="truncate">{{ file.name }}</span>
                   <span class="faint text-xs">{{ formatFileSize(file.size) }}</span>
                   <button type="button" class="file-remove" @click="removeCommentFile(index)">

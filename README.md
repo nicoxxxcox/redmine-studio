@@ -19,7 +19,8 @@ toutes les requêtes passent par le petit proxy same-origin intégré à l'appli
   sous-tickets, pièces jointes.
 - **Discussion** : commentaires triables et repliables (les 3 derniers sont ouverts par
   défaut), historique des modifications compact, édition des notes, notes privées,
-  pièces jointes et brouillons conservés localement.
+  pièces jointes, collage d'une image du presse-papiers (`Ctrl+V` / `⌘+V`) et brouillons
+  conservés localement.
 - **Composeur latéral** : l'ajout d'un commentaire se fait dans la colonne de droite, sans
   masquer les commentaires précédents.
 - **Temps** : chronomètre persistant, saisie rapide, édition/suppression, feuille de temps
@@ -122,6 +123,10 @@ Cette opération nécessite une **session Redmine active** dans le navigateur. P
 fuite, le proxy ne transmet le cookie de session que lorsque Redmine est servi sur le même nom
 d'hôte que l'application (les ports peuvent différer). Sur une instance distante, l'édition est
 refusée avec un message explicite ; les autres fonctions restent disponibles avec la clé API.
+
+Le collage d'une image s'effectue dans le composeur de nouveau commentaire. Redmine 3.4 ne
+permet pas d'ajouter une pièce jointe à un journal existant : lors de l'édition d'une note, un
+message invite à publier l'image dans un nouveau commentaire.
 
 ## Certificats et réseau
 
