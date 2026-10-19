@@ -1,0 +1,23 @@
+{
+  "name": "redmine-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Client front-end moderne pour Redmine 3.4 — gestion des tickets, commentaires et temps.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "node server/index.mjs"
+  },
+  "dependencies": {
+    "lucide-vue-next": "^0.468.0",
+    "pinia": "^2.3.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "vite": "^6.0.5"
+  }
+}

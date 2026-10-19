@@ -1,0 +1,313 @@
+const DATE_LOCALE = 'fr-FR'
+
+export function parseDate(value) {
+  if (!value) return null
+  if (value instanceof Date) return value
+  // Les dates seules (YYYY-MM-DD) ne doivent pas être interprétées en UTC,
+  // sinon un décalage horaire négatif affiche la veille.
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value))
+  const date = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+export function formatDate(value, options = {}) {
+  const date = parseDate(value)
+  if (!date) return '—'
+  return new Intl.DateTimeFormat(DATE_LOCALE, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    ...options,
+  }).format(date)
+}
+
+export function formatDateTime(value) {
+  const date = parseDate(value)
+  if (!date) return '—'
+  return new Intl.DateTimeFormat(DATE_LOCALE, {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
+export function formatDay(value) {
+  const date = parseDate(value)
+  if (!date) return '—'
+  return new Intl.DateTimeFormat(DATE_LOCALE, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(date)
+}
+
+export function formatShortDay(value) {
+  const date = parseDate(value)
+  if (!date) return ''
+  return new Intl.DateTimeFormat(DATE_LOCALE, {
+    weekday: 'short',
+    day: 'numeric',
+  }).format(date)
+}
+
+export function relativeTime(value) {
+  const date = parseDate(value)
+  if (!date) return '—'
+  const diff = date.getTime() - Date.now()
+  const abs = Math.abs(diff)
+  const rtf = new Intl.RelativeTimeFormat(DATE_LOCALE, { numeric: 'auto' })
+  const units = [
+    ['year', 31_536_000_000],
+    ['month', 2_592_000_000],
+    ['week', 604_800_000],
+    ['day', 86_400_000],
+    ['hour', 3_600_000],
+    ['minute', 60_000],
+  ]
+  for (const [unit, ms] of units) {
+    if (abs >= ms) return rtf.format(Math.round(diff / ms), unit)
+  }
+  return "à l'instant"
+}
+
+export function toIsoDate(value = new Date()) {
+  const date = parseDate(value) || new Date()
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export function startOfWeek(value = new Date()) {
+  const date = parseDate(value) || new Date()
+  const result = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const day = (result.getDay() + 6) % 7
+  result.setDate(result.getDate() - day)
+  return result
+}
+
+export function addDays(value, days) {
+  const date = new Date(parseDate(value) || new Date())
+  date.setDate(date.getDate() + days)
+  return date
+}
+
+export function formatHours(hours, { compact = false } = {}) {
+  const value = Number(hours) || 0
+  if (compact) return `${value.toLocaleString(DATE_LOCALE, { maximumFractionDigits: 2 })} h`
+  const totalMinutes = Math.round(value * 60)
+  const whole = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  if (!whole && !minutes) return '0 h'
+  if (!minutes) return `${whole} h`
+  if (!whole) return `${minutes} min`
+  return `${whole} h ${String(minutes).padStart(2, '0')}`
+}
+
+export function parseHoursInput(input) {
+  if (typeof input === 'number') return input
+  let normalized = String(input ?? '').trim()
+  // Accepte « 1h30 », « 1 h 30 » et « 1:30 » en plus de « 1,5 ».
+  const withMinutes = /^(\d+)\s*(?:h|:)\s*(\d{1,2})$/i.exec(normalized)
+  if (withMinutes) {
+    const minutes = Number(withMinutes[2])
+    if (minutes >= 60) return null
+    return Math.round((Number(withMinutes[1]) + minutes / 60) * 100) / 100
+  }
+  normalized = normalized.replace(',', '.').replace(/\s*h\s*$/i, '')
+  const value = Number.parseFloat(normalized)
+  if (!Number.isFinite(value)) return null
+  return Math.round(value * 100) / 100
+}
+
+export function formatFileSize(bytes) {
+  const value = Number(bytes) || 0
+  if (value < 1024) return `${value} o`
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(0)} Ko`
+  return `${(value / (1024 * 1024)).toFixed(1)} Mo`
+}
+
+export function initials(name = '') {
+  const parts = String(name).trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+export function fullName(user) {
+  if (!user) return 'Inconnu'
+  return [user.firstname, user.lastname].filter(Boolean).join(' ') || user.name || user.login || 'Inconnu'
+}
+
+export function isOverdue(issue) {
+  if (!issue?.due_date) return false
+  if (issue.status?.is_closed) return false
+  const due = parseDate(`${issue.due_date}T23:59:59`)
+  return due ? due.getTime() < Date.now() : false
+}
+
+export function escapeHtml(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+}
+
+/**
+ * Rendu léger et sûr du Textile/Markdown utilisé dans Redmine.
+ * Le HTML est échappé avant toute transformation : pas d'injection possible.
+ */
+export function renderRichText(source = '') {
+  if (!source) return ''
+  const codeBlocks = []
+  let text = String(source).replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+    const index = codeBlocks.length
+    codeBlocks.push(
+      `<pre class="rt-code"><code>${escapeHtml(code.replace(/\n$/, ''))}</code></pre>`,
+    )
+    return `\u0000CODE${index}\u0000`
+  })
+
+  text = escapeHtml(text)
+  text = text.replace(/\r\n/g, '\n')
+
+  // Liens markdown [libellé](url)
+  text = text.replace(
+    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
+  )
+  // Liens bruts
+  text = text.replace(
+    /(?<!["'=])(https?:\/\/[^\s<]+[^\s<.,;:!?)\]])/g,
+    '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>',
+  )
+  // Références de tickets #123
+  text = text.replace(
+    /(^|[\s(])(#(\d+))\b/g,
+    '$1<a class="issue-ref" href="/issues/$3" data-internal>$2</a>',
+  )
+
+  const lines = text.split('\n')
+  const html = []
+  let listType = null
+  let inQuote = false
+  let paragraph = []
+
+  const flushParagraph = () => {
+    if (paragraph.length) {
+      html.push(`<p>${paragraph.join('<br>')}</p>`)
+      paragraph = []
+    }
+  }
+  const closeList = () => {
+    if (listType) {
+      html.push(`</${listType}>`)
+      listType = null
+    }
+  }
+  const closeQuote = () => {
+    if (inQuote) {
+      html.push('</blockquote>')
+      inQuote = false
+    }
+  }
+
+  for (const [lineIndex, rawLine] of lines.entries()) {
+    const line = rawLine.trimEnd()
+    if (!line.trim()) {
+      flushParagraph()
+      closeList()
+      closeQuote()
+      continue
+    }
+
+    // Textile numérote les listes avec « # », ce qui entre en conflit avec les
+    // titres Markdown. Un « # » suivi d'un autre élément de liste est donc
+    // traité comme une liste ; un « # » isolé reste un titre.
+    const nextLine = (lines[lineIndex + 1] || '').trim()
+    const hashList =
+      /^#\s+\S/.test(line) && (listType === 'ol' || /^#\s+\S/.test(nextLine))
+
+    const codeMatch = line.match(/^\u0000CODE(\d+)\u0000$/)
+    if (codeMatch) {
+      flushParagraph()
+      closeList()
+      closeQuote()
+      html.push(codeBlocks[Number(codeMatch[1])] || '')
+      continue
+    }
+
+    const heading = line.match(/^(#{1,4})\s+(.+)$/)
+    const textileHeading = line.match(/^h([1-6])\.\s+(.+)$/i)
+    if ((heading && !hashList) || textileHeading) {
+      flushParagraph()
+      closeList()
+      closeQuote()
+      const level = heading ? heading[1].length : Number(textileHeading[1])
+      const content = (heading || textileHeading)[2]
+      html.push(`<h${level}>${inline(content)}</h${level}>`)
+      continue
+    }
+
+    if (/^(-{3,}|\*{3,})$/.test(line.trim())) {
+      flushParagraph()
+      closeList()
+      closeQuote()
+      html.push('<hr>')
+      continue
+    }
+
+    const quote = line.match(/^(?:>|&gt;)\s?(.*)$/)
+    const textileQuote = line.match(/^bq\.\s?(.*)$/i)
+    if (quote || textileQuote) {
+      flushParagraph()
+      closeList()
+      if (!inQuote) {
+        html.push('<blockquote>')
+        inQuote = true
+      }
+      html.push(`<p>${inline((quote || textileQuote)[1])}</p>`)
+      continue
+    }
+    closeQuote()
+
+    const bullet = line.match(/^\s*[*+-]\s+(.+)$/)
+    const numbered = line.match(/^\s*(?:\d+[.)]|#)\s+(.+)$/)
+    if (bullet || numbered) {
+      flushParagraph()
+      const wanted = bullet ? 'ul' : 'ol'
+      if (listType !== wanted) {
+        closeList()
+        html.push(`<${wanted}>`)
+        listType = wanted
+      }
+      html.push(`<li>${inline((bullet || numbered)[1])}</li>`)
+      continue
+    }
+    closeList()
+
+    paragraph.push(inline(line))
+  }
+
+  flushParagraph()
+  closeList()
+  closeQuote()
+
+  return html.join('\n')
+}
+
+function inline(text) {
+  return text
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/@([^@\n]+)@/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    // Textile : *gras* (le Markdown italique reste disponible via _…_).
+    .replace(/(^|[\s(])\*([^*\n]+)\*/g, '$1<strong>$2</strong>')
+    .replace(/(^|[\s(])_([^_\n]+)_/g, '$1<em>$2</em>')
+    .replace(/~~([^~]+)~~/g, '<del>$1</del>')
+}
