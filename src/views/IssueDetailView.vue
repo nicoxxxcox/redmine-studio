@@ -51,6 +51,7 @@ import { saveBlob, ApiError } from '../lib/api.js'
 import { copyText } from '../lib/clipboard.js'
 import IssueId from '../components/IssueId.vue'
 import StatusQuickSelect from '../components/StatusQuickSelect.vue'
+import SprintLink from '../components/SprintLink.vue'
 import PriorityBadge from '../components/PriorityBadge.vue'
 import UserAvatar from '../components/UserAvatar.vue'
 import MarkdownBody from '../components/MarkdownBody.vue'
@@ -857,9 +858,9 @@ onBeforeUnmount(() => {
               @change="quickChangeStatus"
             />
             <span v-if="issue.tracker" class="tag">{{ issue.tracker.name }}</span>
-            <span v-if="sprint" class="pill sprint-pill" data-tone="violet" :title="sprint.label">
+            <SprintLink v-if="sprint" class="pill sprint-pill" data-tone="violet" :sprint="sprint">
               <Milestone :size="11" /> {{ sprint.value }}
-            </span>
+            </SprintLink>
             <span v-if="issue.is_private" class="tag"><Lock :size="11" /> Privé</span>
             <span v-if="isOverdue(issue)" class="overdue-tag">
               <TriangleAlert :size="11" /> En retard
@@ -1598,10 +1599,10 @@ onBeforeUnmount(() => {
               </div>
               <div v-if="sprint" class="meta-row">
                 <span class="meta-label">{{ sprint.label }}</span>
-                <span class="meta-value">
+                <SprintLink class="meta-value sprint-meta" :sprint="sprint">
                   <Milestone :size="13" />
                   <span class="truncate" :title="sprint.value">{{ sprint.value }}</span>
-                </span>
+                </SprintLink>
               </div>
               <div class="meta-row">
                 <span class="meta-label">Créé le</span>
@@ -1945,6 +1946,16 @@ onBeforeUnmount(() => {
 .sprint-pill {
   gap: 4px;
   flex: none;
+}
+
+.sprint-pill:not(.is-static):hover,
+.sprint-meta:not(.is-static):hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.meta-value.sprint-meta {
+  color: var(--violet);
 }
 
 .timeline {

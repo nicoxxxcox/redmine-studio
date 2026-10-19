@@ -12,6 +12,7 @@ import {
 import IssueId from './IssueId.vue'
 import StatusBadge from './StatusBadge.vue'
 import StatusQuickSelect from './StatusQuickSelect.vue'
+import SprintLink from './SprintLink.vue'
 import PriorityBadge from './PriorityBadge.vue'
 import UserAvatar from './UserAvatar.vue'
 
@@ -51,10 +52,10 @@ const assigneeName = computed(() => {
       </span>
       <span class="row-mobile-meta">
         <StatusBadge :status="issue.status" />
-        <span v-if="sprint" class="sprint-chip" :title="sprint.label">
+        <SprintLink v-if="sprint" class="sprint-chip" :sprint="sprint">
           <Milestone :size="10" />
           <span class="truncate">{{ sprint.value }}</span>
-        </span>
+        </SprintLink>
         <span v-if="assigneeName" class="mobile-assignee">{{ assigneeName }}</span>
         <span v-if="issue.due_date" :class="{ 'due-overdue': overdue }">
           {{ formatDate(issue.due_date, { year: undefined }) }}
@@ -84,10 +85,10 @@ const assigneeName = computed(() => {
     </span>
 
     <span class="row-sprint">
-      <span v-if="sprint" class="sprint-chip" :title="sprint.label">
+      <SprintLink v-if="sprint" class="sprint-chip" :sprint="sprint">
         <Milestone :size="10" />
         <span class="truncate">{{ sprint.value }}</span>
-      </span>
+      </SprintLink>
       <span v-else class="row-empty" title="Aucun sprint">—</span>
     </span>
 
@@ -201,6 +202,11 @@ const assigneeName = computed(() => {
 
 .sprint-chip svg {
   flex: none;
+}
+
+.sprint-chip:not(.is-static):hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .meta-hours {

@@ -145,7 +145,7 @@ export function issueSprint(issue) {
 
   const version = issue?.fixed_version
   if (version?.name) {
-    return { label: 'Sprint', value: version.name }
+    return { label: 'Sprint', value: version.name, id: version.id }
   }
   return null
 }

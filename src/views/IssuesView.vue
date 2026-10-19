@@ -23,6 +23,7 @@ import { statusHue } from '../lib/constants.js'
 import IssueId from '../components/IssueId.vue'
 import IssueRow from '../components/IssueRow.vue'
 import StatusBadge from '../components/StatusBadge.vue'
+import SprintLink from '../components/SprintLink.vue'
 import PriorityBadge from '../components/PriorityBadge.vue'
 import UserAvatar from '../components/UserAvatar.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -697,9 +698,9 @@ watch(() => refresh.issueVersion, () => load())
                 <PriorityBadge :priority="issue.priority" :show-label="false" />
               </div>
               <p class="board-card-subject">{{ issue.subject }}</p>
-              <span v-if="sprintOf(issue)" class="board-card-sprint" :title="sprintOf(issue).label">
+              <SprintLink v-if="sprintOf(issue)" class="board-card-sprint" :sprint="sprintOf(issue)">
                 <Milestone :size="10" /> {{ sprintOf(issue).value }}
-              </span>
+              </SprintLink>
               <div class="board-card-meta">
                 <span class="truncate">{{ issue.project?.name }}</span>
                 <span
@@ -1095,6 +1096,11 @@ watch(() => refresh.issueVersion, () => load())
 
 .board-card-sprint svg {
   flex: none;
+}
+
+.board-card-sprint:not(.is-static):hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .board-card-meta {
