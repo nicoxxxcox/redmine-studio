@@ -27,6 +27,8 @@ import {
 } from '../lib/format.js'
 import EmptyState from '../components/EmptyState.vue'
 import IssueId from '../components/IssueId.vue'
+import ColumnResizer from '../components/ColumnResizer.vue'
+import { useColumnWidths } from '../composables/useColumnWidths.js'
 
 const settings = useSettingsStore()
 const session = useSessionStore()
@@ -40,6 +42,23 @@ const loading = ref(true)
 const error = ref('')
 const projectFilter = ref('')
 let loadSequence = 0
+
+const timeHead = ref(null)
+const {
+  template: columnsTemplate,
+  isCustom: columnsResized,
+  beginDrag: beginColumnDrag,
+  nudge: nudgeColumn,
+  reset: resetColumns,
+} = useColumnWidths('time-entries', {
+  defaults: 'minmax(190px, 1.4fr) 100px minmax(120px, 1fr) 62px 28px',
+  count: 5,
+  min: 48,
+  cells: () => Array.from(timeHead.value?.children ?? []),
+})
+const columnsStyle = computed(() =>
+  columnsResized.value ? { '--time-cols': columnsTemplate.value } : {},
+)
 
 const weekEnd = computed(() => addDays(weekStart.value, 6))
 const weekLabel = computed(() => {
@@ -261,51 +280,97 @@ onMounted(load)
         </div>
 
         <template v-else-if="daysWithEntries.length">
-          <section v-for="day in daysWithEntries" :key="day.iso" class="card day-card">
-            <header class="day-head">
-              <div class="day-head-title">
-                <span class="day-name" :class="{ 'is-today': day.isToday }">{{ day.label }}</span>
-                <span v-if="day.isToday" class="today-pill">Aujourd'hui</span>
-              </div>
-              <div class="day-head-right">
-                <span class="day-total">{{ formatHours(day.total) }}</span>
-                <button class="btn btn-ghost btn-icon btn-sm" type="button" title="Ajouter du temps" @click="openTime(null, day)">
-                  <Plus :size="14" />
-                </button>
-              </div>
-            </header>
-            <div class="day-entries">
-              <div v-for="entry in day.entries" :key="entry.id" class="time-row">
-                <div class="time-issue">
-                  <RouterLink
-                    v-if="entry.issue"
-                    :to="{ name: 'issue', params: { id: entry.issue.id } }"
-                    class="time-issue-link"
-                  >
-                    <IssueId :id="entry.issue.id" class="time-issue-id" />
-                    <span class="truncate">{{ entryIssue(entry)?.subject || `Ticket #${entry.issue.id}` }}</span>
-                  </RouterLink>
-                  <span v-else class="time-issue-link muted">
-                    <FolderKanban :size="13" />
-                    <span class="truncate">{{ entry.project?.name || 'Sans ticket' }}</span>
-                  </span>
-                </div>
-                <span class="time-activity">{{ entry.activity?.name || '—' }}</span>
-                <span class="time-comment truncate">{{ entry.comments || '' }}</span>
-                <span class="time-hours">{{ formatHours(entry.hours) }}</span>
-                <button
-                  v-if="entry.issue && (entry.user?.id === session.user?.id || session.user?.admin)"
-                  class="btn btn-ghost btn-icon btn-sm time-edit"
-                  type="button"
-                  title="Modifier"
-                  @click="openTime(entry)"
-                >
-                  <Pencil :size="13" />
-                </button>
-                <span v-else></span>
-              </div>
+          <div
+            class="time-table"
+            :class="{ 'is-resized': columnsResized }"
+            :style="columnsStyle"
+          >
+            <div ref="timeHead" class="time-list-head">
+              <span>
+                Ticket
+                <ColumnResizer
+                  label="Ajuster la colonne Ticket"
+                  @start="beginColumnDrag($event, 0)"
+                  @nudge="nudgeColumn(0, $event)"
+                  @reset="resetColumns"
+                />
+              </span>
+              <span>
+                Activité
+                <ColumnResizer
+                  label="Ajuster la colonne Activité"
+                  @start="beginColumnDrag($event, 1)"
+                  @nudge="nudgeColumn(1, $event)"
+                  @reset="resetColumns"
+                />
+              </span>
+              <span>
+                Commentaire
+                <ColumnResizer
+                  label="Ajuster la colonne Commentaire"
+                  @start="beginColumnDrag($event, 2)"
+                  @nudge="nudgeColumn(2, $event)"
+                  @reset="resetColumns"
+                />
+              </span>
+              <span>
+                Temps
+                <ColumnResizer
+                  label="Ajuster la colonne Temps"
+                  @start="beginColumnDrag($event, 3)"
+                  @nudge="nudgeColumn(3, $event)"
+                  @reset="resetColumns"
+                />
+              </span>
+              <span></span>
             </div>
-          </section>
+
+            <section v-for="day in daysWithEntries" :key="day.iso" class="card day-card">
+              <header class="day-head">
+                <div class="day-head-title">
+                  <span class="day-name" :class="{ 'is-today': day.isToday }">{{ day.label }}</span>
+                  <span v-if="day.isToday" class="today-pill">Aujourd'hui</span>
+                </div>
+                <div class="day-head-right">
+                  <span class="day-total">{{ formatHours(day.total) }}</span>
+                  <button class="btn btn-ghost btn-icon btn-sm" type="button" title="Ajouter du temps" @click="openTime(null, day)">
+                    <Plus :size="14" />
+                  </button>
+                </div>
+              </header>
+              <div class="day-entries">
+                <div v-for="entry in day.entries" :key="entry.id" class="time-row">
+                  <div class="time-issue">
+                    <RouterLink
+                      v-if="entry.issue"
+                      :to="{ name: 'issue', params: { id: entry.issue.id } }"
+                      class="time-issue-link"
+                    >
+                      <IssueId :id="entry.issue.id" class="time-issue-id" />
+                      <span class="truncate">{{ entryIssue(entry)?.subject || `Ticket #${entry.issue.id}` }}</span>
+                    </RouterLink>
+                    <span v-else class="time-issue-link muted">
+                      <FolderKanban :size="13" />
+                      <span class="truncate">{{ entry.project?.name || 'Sans ticket' }}</span>
+                    </span>
+                  </div>
+                  <span class="time-activity">{{ entry.activity?.name || '—' }}</span>
+                  <span class="time-comment truncate">{{ entry.comments || '' }}</span>
+                  <span class="time-hours">{{ formatHours(entry.hours) }}</span>
+                  <button
+                    v-if="entry.issue && (entry.user?.id === session.user?.id || session.user?.admin)"
+                    class="btn btn-ghost btn-icon btn-sm time-edit"
+                    type="button"
+                    title="Modifier"
+                    @click="openTime(entry)"
+                  >
+                    <Pencil :size="13" />
+                  </button>
+                  <span v-else></span>
+                </div>
+              </div>
+            </section>
+          </div>
         </template>
 
         <section v-else-if="!loading" class="card">
@@ -609,9 +674,50 @@ onMounted(load)
   flex-direction: column;
 }
 
+.time-table {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-x: auto;
+}
+
+.time-list-head {
+  display: grid;
+  grid-template-columns: var(
+    --time-cols,
+    minmax(190px, 1.4fr) 100px minmax(120px, 1fr) 62px 28px
+  );
+  align-items: center;
+  gap: 10px;
+  padding: 0 15px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.time-list-head > span {
+  position: relative;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 761px) {
+  .time-table.is-resized .day-card,
+  .time-table.is-resized .time-list-head,
+  .time-table.is-resized .time-row {
+    min-width: max-content;
+  }
+}
+
 .time-row {
   display: grid;
-  grid-template-columns: minmax(190px, 1.4fr) 100px minmax(120px, 1fr) 62px 28px;
+  grid-template-columns: var(
+    --time-cols,
+    minmax(190px, 1.4fr) 100px minmax(120px, 1fr) 62px 28px
+  );
   align-items: center;
   gap: 10px;
   padding: 8px 14px;
@@ -803,6 +909,9 @@ onMounted(load)
 @media (max-width: 760px) {
   .time-row {
     grid-template-columns: minmax(0, 1fr) 62px 28px;
+  }
+  .time-list-head {
+    display: none;
   }
   .time-activity,
   .time-comment {

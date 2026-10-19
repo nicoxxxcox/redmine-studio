@@ -221,6 +221,10 @@ const assigneeName = computed(() => {
   min-width: 0;
 }
 
+.row-status {
+  overflow: hidden;
+}
+
 .row-priority {
   gap: 6px;
 }

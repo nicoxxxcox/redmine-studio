@@ -27,6 +27,8 @@ import SprintLink from '../components/SprintLink.vue'
 import PriorityBadge from '../components/PriorityBadge.vue'
 import UserAvatar from '../components/UserAvatar.vue'
 import EmptyState from '../components/EmptyState.vue'
+import ColumnResizer from '../components/ColumnResizer.vue'
+import { useColumnWidths } from '../composables/useColumnWidths.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -52,6 +54,23 @@ const view = ref(route.query.view === 'board' ? 'board' : 'list')
 const search = ref(filters.subject)
 const advancedOpen = ref(
   Boolean(filters.priority_id || filters.tracker_id || filters.author_id || filters.overdue),
+)
+
+const listHead = ref(null)
+const {
+  template: columnsTemplate,
+  isCustom: columnsResized,
+  beginDrag: beginColumnDrag,
+  nudge: nudgeColumn,
+  reset: resetColumns,
+} = useColumnWidths('issues-list', {
+  defaults: '76px minmax(220px, 1fr) 124px 104px 156px 132px 104px',
+  count: 7,
+  min: 56,
+  cells: () => Array.from(listHead.value?.children ?? []),
+})
+const columnsStyle = computed(() =>
+  columnsResized.value ? { '--issues-cols': columnsTemplate.value } : {},
 )
 
 const issues = ref([])
@@ -620,48 +639,102 @@ watch(() => refresh.issueVersion, () => load())
     </div>
 
     <div v-if="view === 'list'" class="card issues-card">
-      <div class="issue-table-head issues-grid">
-        <span>N°</span>
-        <span>Sujet</span>
-        <span class="col-status">Statut</span>
-        <span class="col-priority">Priorité</span>
-        <span class="col-assignee">Assigné</span>
-        <span class="col-sprint">Sprints</span>
-        <span class="col-updated">Activité</span>
-      </div>
-
-      <div v-if="loading && !issues.length" class="issue-skeletons">
-        <div v-for="index in 8" :key="index" class="skeleton-issue issues-grid">
-          <span class="skeleton" style="width: 34px; height: 11px"></span>
-          <span class="skeleton" style="height: 14px; width: 70%"></span>
-          <span class="skeleton" style="height: 19px; width: 80px"></span>
-          <span class="skeleton" style="height: 12px; width: 60px"></span>
-          <span class="skeleton" style="height: 22px; width: 110px"></span>
-          <span class="skeleton" style="height: 12px; width: 70px"></span>
-          <span class="skeleton" style="height: 11px; width: 60px"></span>
-        </div>
-      </div>
-
-      <template v-else-if="issues.length">
-        <IssueRow
-          v-for="issue in issues"
-          :key="issue.id"
-          :issue="issue"
-          :status-busy="statusSaving.has(issue.id)"
-          @change-status="changeStatus(issue, $event)"
-        />
-      </template>
-
-      <EmptyState
-        v-else
-        :icon="Inbox"
-        title="Aucun ticket ne correspond"
-        text="Essayez d'élargir les filtres ou de modifier votre recherche."
+      <div
+        class="issues-scroll"
+        :class="{ 'is-resized': columnsResized }"
+        :style="columnsStyle"
       >
-        <button class="btn btn-sm" type="button" @click="resetFilters">
-          <X :size="13" /> Réinitialiser les filtres
-        </button>
-      </EmptyState>
+        <div ref="listHead" class="issue-table-head issues-grid">
+          <span>
+            N°
+            <ColumnResizer
+              label="Ajuster la colonne N°"
+              @start="beginColumnDrag($event, 0)"
+              @nudge="nudgeColumn(0, $event)"
+              @reset="resetColumns"
+            />
+          </span>
+          <span>
+            Sujet
+            <ColumnResizer
+              label="Ajuster la colonne Sujet"
+              @start="beginColumnDrag($event, 1)"
+              @nudge="nudgeColumn(1, $event)"
+              @reset="resetColumns"
+            />
+          </span>
+          <span class="col-status">
+            Statut
+            <ColumnResizer
+              label="Ajuster la colonne Statut"
+              @start="beginColumnDrag($event, 2)"
+              @nudge="nudgeColumn(2, $event)"
+              @reset="resetColumns"
+            />
+          </span>
+          <span class="col-priority">
+            Priorité
+            <ColumnResizer
+              label="Ajuster la colonne Priorité"
+              @start="beginColumnDrag($event, 3)"
+              @nudge="nudgeColumn(3, $event)"
+              @reset="resetColumns"
+            />
+          </span>
+          <span class="col-assignee">
+            Assigné
+            <ColumnResizer
+              label="Ajuster la colonne Assigné"
+              @start="beginColumnDrag($event, 4)"
+              @nudge="nudgeColumn(4, $event)"
+              @reset="resetColumns"
+            />
+          </span>
+          <span class="col-sprint">
+            Sprints
+            <ColumnResizer
+              label="Ajuster la colonne Sprints"
+              @start="beginColumnDrag($event, 5)"
+              @nudge="nudgeColumn(5, $event)"
+              @reset="resetColumns"
+            />
+          </span>
+          <span class="col-updated">Activité</span>
+        </div>
+
+        <div v-if="loading && !issues.length" class="issue-skeletons">
+          <div v-for="index in 8" :key="index" class="skeleton-issue issues-grid">
+            <span class="skeleton" style="width: 34px; height: 11px"></span>
+            <span class="skeleton" style="height: 14px; width: 70%"></span>
+            <span class="skeleton" style="height: 19px; width: 80px"></span>
+            <span class="skeleton" style="height: 12px; width: 60px"></span>
+            <span class="skeleton" style="height: 22px; width: 110px"></span>
+            <span class="skeleton" style="height: 12px; width: 70px"></span>
+            <span class="skeleton" style="height: 11px; width: 60px"></span>
+          </div>
+        </div>
+
+        <template v-else-if="issues.length">
+          <IssueRow
+            v-for="issue in issues"
+            :key="issue.id"
+            :issue="issue"
+            :status-busy="statusSaving.has(issue.id)"
+            @change-status="changeStatus(issue, $event)"
+          />
+        </template>
+
+        <EmptyState
+          v-else
+          :icon="Inbox"
+          title="Aucun ticket ne correspond"
+          text="Essayez d'élargir les filtres ou de modifier votre recherche."
+        >
+          <button class="btn btn-sm" type="button" @click="resetFilters">
+            <X :size="13" /> Réinitialiser les filtres
+          </button>
+        </EmptyState>
+      </div>
 
       <footer v-if="issues.length" class="issues-foot">
         <span class="text-xs muted">
@@ -928,6 +1001,16 @@ watch(() => refresh.issueVersion, () => load())
 
 .issues-card {
   overflow: hidden;
+}
+
+.issues-scroll {
+  overflow-x: auto;
+}
+
+@media (min-width: 1241px) {
+  .issues-scroll.is-resized .issues-grid {
+    min-width: max-content;
+  }
 }
 
 .issue-skeleton {
@@ -1200,6 +1283,9 @@ watch(() => refresh.issueVersion, () => load())
   }
   .advanced-check {
     grid-column: span 2;
+  }
+  .issue-table-head :deep(.col-resizer) {
+    display: none;
   }
 }
 

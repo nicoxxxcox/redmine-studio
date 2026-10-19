@@ -15,6 +15,6 @@ const badgeStyle = computed(() => (hue.value === null ? {} : { '--status-hue': h
 
 <template>
   <span class="badge" :class="{ 'status-badge': hue !== null }" :style="badgeStyle">
-    {{ label || status?.name || '—' }}
+    <span class="badge-label">{{ label || status?.name || '—' }}</span>
   </span>
 </template>

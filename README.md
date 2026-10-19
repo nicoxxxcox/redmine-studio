@@ -28,7 +28,8 @@ toutes les requêtes passent par le petit proxy same-origin intégré à l'appli
   par activité et résumé.
 - **Projets** : accès rapide aux tickets de chaque projet.
 - **Confort** : thème clair/sombre/système, palette de commandes (`⌘/Ctrl + K`), raccourcis
-  clavier, interface responsive, notifications.
+  clavier, interface responsive, largeur des colonnes des tableaux ajustable (glisser les
+  séparateurs d'en-tête, double-clic pour réinitialiser, mémorisée localement), notifications.
 - **Rendu Textile / Markdown** léger et sécurisé pour les descriptions et commentaires.
 
 ## Prérequis

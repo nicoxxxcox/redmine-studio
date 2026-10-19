@@ -59,6 +59,7 @@ function onChange(event) {
   align-items: center;
   gap: 2px;
   max-width: 100%;
+  min-width: 0;
   border-radius: 999px;
   vertical-align: middle;
 }

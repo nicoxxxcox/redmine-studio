@@ -36,6 +36,8 @@ import StatusBadge from '../components/StatusBadge.vue'
 import StatusQuickSelect from '../components/StatusQuickSelect.vue'
 import PriorityBadge from '../components/PriorityBadge.vue'
 import EmptyState from '../components/EmptyState.vue'
+import ColumnResizer from '../components/ColumnResizer.vue'
+import { useColumnWidths } from '../composables/useColumnWidths.js'
 
 const router = useRouter()
 const settings = useSettingsStore()
@@ -53,6 +55,23 @@ const overdueCount = ref(0)
 const createdCount = ref(0)
 const recentIssues = ref([])
 const entries = ref([])
+
+const recentHead = ref(null)
+const {
+  template: columnsTemplate,
+  isCustom: columnsResized,
+  beginDrag: beginColumnDrag,
+  nudge: nudgeColumn,
+  reset: resetColumns,
+} = useColumnWidths('dashboard-recent', {
+  defaults: '52px minmax(160px, 1.4fr) minmax(100px, 1fr) 110px 90px',
+  count: 5,
+  min: 44,
+  cells: () => Array.from(recentHead.value?.children ?? []),
+})
+const columnsStyle = computed(() =>
+  columnsResized.value ? { '--recent-cols': columnsTemplate.value } : {},
+)
 const statusSaving = ref(new Set())
 let loadSequence = 0
 
@@ -410,7 +429,51 @@ watch(() => refresh.timeVersion, load)
           Tous les tickets <ArrowRight :size="13" />
         </RouterLink>
       </header>
-      <div v-if="recentIssues.length" class="recent-list">
+      <div
+        v-if="recentIssues.length"
+        class="recent-list"
+        :class="{ 'is-resized': columnsResized }"
+        :style="columnsStyle"
+      >
+        <div ref="recentHead" class="recent-head">
+          <span>
+            N°
+            <ColumnResizer
+              label="Ajuster la colonne N°"
+              @start="beginColumnDrag($event, 0)"
+              @nudge="nudgeColumn(0, $event)"
+              @reset="resetColumns"
+            />
+          </span>
+          <span>
+            Sujet
+            <ColumnResizer
+              label="Ajuster la colonne Sujet"
+              @start="beginColumnDrag($event, 1)"
+              @nudge="nudgeColumn(1, $event)"
+              @reset="resetColumns"
+            />
+          </span>
+          <span>
+            Projet
+            <ColumnResizer
+              label="Ajuster la colonne Projet"
+              @start="beginColumnDrag($event, 2)"
+              @nudge="nudgeColumn(2, $event)"
+              @reset="resetColumns"
+            />
+          </span>
+          <span>
+            Statut
+            <ColumnResizer
+              label="Ajuster la colonne Statut"
+              @start="beginColumnDrag($event, 3)"
+              @nudge="nudgeColumn(3, $event)"
+              @reset="resetColumns"
+            />
+          </span>
+          <span>Activité</span>
+        </div>
         <RouterLink
           v-for="issue in recentIssues"
           :key="issue.id"
@@ -893,11 +956,45 @@ watch(() => refresh.timeVersion, load)
 .recent-list {
   display: flex;
   flex-direction: column;
+  overflow-x: auto;
+}
+
+.recent-head {
+  display: grid;
+  grid-template-columns: var(
+    --recent-cols,
+    52px minmax(160px, 1.4fr) minmax(100px, 1fr) 110px 90px
+  );
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px 7px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.recent-head > span {
+  position: relative;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 681px) {
+  .recent-list.is-resized .recent-head,
+  .recent-list.is-resized .recent-item {
+    min-width: max-content;
+  }
 }
 
 .recent-item {
   display: grid;
-  grid-template-columns: 52px minmax(160px, 1.4fr) minmax(100px, 1fr) 110px 90px;
+  grid-template-columns: var(
+    --recent-cols,
+    52px minmax(160px, 1.4fr) minmax(100px, 1fr) 110px 90px
+  );
   align-items: center;
   gap: 12px;
   padding: 9px 16px;
@@ -1002,6 +1099,9 @@ watch(() => refresh.timeVersion, load)
   }
   .recent-item {
     grid-template-columns: 44px minmax(0, 1fr) 90px;
+  }
+  .recent-head {
+    display: none;
   }
   .recent-project,
   .recent-time {
