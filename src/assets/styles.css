@@ -623,7 +623,7 @@ ol {
   padding: 8px 11px;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background-color: var(--surface);
   color: var(--ink);
   font-size: 13px;
   transition:
@@ -654,7 +654,7 @@ ol {
 .input:disabled,
 .select:disabled,
 .textarea:disabled {
-  background: var(--surface-3);
+  background-color: var(--surface-3);
   color: var(--muted);
 }
 

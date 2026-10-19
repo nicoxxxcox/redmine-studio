@@ -2338,7 +2338,7 @@ onBeforeUnmount(() => {
   padding: 4px 8px;
   font-size: 11px;
   border-color: transparent;
-  background: transparent;
+  background-color: transparent;
   box-shadow: none;
   width: auto;
   flex: 1;
@@ -2354,12 +2354,12 @@ select.property-control {
 
 .property-control:hover {
   border-color: var(--line-strong);
-  background: var(--surface);
+  background-color: var(--surface);
 }
 
 .property-control:focus {
   border-color: var(--accent);
-  background: var(--surface);
+  background-color: var(--surface);
   box-shadow: 0 0 0 2px var(--accent-ring);
 }
 
