@@ -126,10 +126,68 @@ export function parseHoursInput(input) {
 const SPRINT_FIELD_PATTERN = /(?:^|[^a-z])(sprints?|it[eé]rations?|cycles?)(?:[^a-z]|$)/i
 
 /**
- * Récupère le sprint d'un ticket, qu'il provienne d'un champ personnalisé
- * (« Sprint », « Itération »…) ou d'une version nommée comme un sprint.
+ * Normalise une valeur de sprint provenant d'un objet d'association
+ * (`easy_sprint`, `sprint`…) ou d'un champ personnalisé.
+ */
+function sprintFromValue(value, label = 'Sprint') {
+  if (value === null || value === undefined) return null
+
+  if (Array.isArray(value)) {
+    const items = value.map((item) => sprintFromValue(item, label)).filter(Boolean)
+    if (!items.length) return null
+    return {
+      label,
+      value: items.map((item) => item.value).join(', '),
+      id: items.length === 1 ? items[0].id : undefined,
+    }
+  }
+
+  if (typeof value === 'object') {
+    const id = value.id ?? value.sprint_id
+    const name = value.name ?? value.label ?? value.title
+    if (id === null || id === undefined || id === '') {
+      if (!name) return null
+      return { label, value: String(name).trim() }
+    }
+    return {
+      label,
+      value: name ? String(name).trim() : `Sprint #${id}`,
+      id,
+    }
+  }
+
+  const text = String(value).trim()
+  return text ? { label, value: text } : null
+}
+
+/**
+ * Récupère le sprint d'un ticket. On privilégie l'association sprint exposée
+ * par Redmine / ses plugins (`easy_sprint`, `sprint`…), puis le champ
+ * personnalisé « Sprint(s) », et enfin la version cible comme simple libellé
+ * de repli (sans identifiant de sprint, car ce n'est pas la même entité).
  */
 export function issueSprint(issue) {
+  let textSprint = null
+  for (const key of ['easy_sprint', 'sprint', 'agile_sprint', 'scrum_sprint']) {
+    const raw = issue?.[key]
+    if (raw && typeof raw === 'object') {
+      const sprint = sprintFromValue(raw)
+      if (sprint) return sprint
+    } else if (!textSprint) {
+      textSprint = sprintFromValue(raw)
+    }
+  }
+
+  if (issue?.sprint_id !== null && issue?.sprint_id !== undefined && issue?.sprint_id !== '') {
+    return {
+      label: 'Sprint',
+      value: String(issue.sprint_name || textSprint?.value || `Sprint #${issue.sprint_id}`).trim(),
+      id: issue.sprint_id,
+    }
+  }
+
+  if (textSprint) return textSprint
+
   const fields = Array.isArray(issue?.custom_fields) ? issue.custom_fields : []
   const field = fields.find((item) => {
     if (!SPRINT_FIELD_PATTERN.test(item?.name || '')) return false
@@ -137,15 +195,13 @@ export function issueSprint(issue) {
     return item.value !== null && item.value !== undefined && String(item.value).trim() !== ''
   })
   if (field) {
-    const value = Array.isArray(field.value)
-      ? field.value.map((item) => String(item).trim()).filter(Boolean).join(', ')
-      : String(field.value).trim()
-    return { label: field.name || 'Sprint', value }
+    const sprint = sprintFromValue(field.value, field.name || 'Sprint')
+    if (sprint) return sprint
   }
 
   const version = issue?.fixed_version
   if (version?.name) {
-    return { label: 'Sprint', value: version.name, id: version.id }
+    return { label: 'Sprint', value: version.name }
   }
   return null
 }
