@@ -144,7 +144,7 @@ function sprintFromValue(value, label = 'Sprint') {
 
   if (typeof value === 'object') {
     const id = value.id ?? value.sprint_id
-    const name = value.name ?? value.label ?? value.title
+    const name = value.name ?? value.label ?? value.title ?? value.value
     if (id === null || id === undefined || id === '') {
       if (!name) return null
       return { label, value: String(name).trim() }
@@ -168,8 +168,16 @@ function sprintFromValue(value, label = 'Sprint') {
  */
 export function issueSprint(issue) {
   let textSprint = null
-  for (const key of ['easy_sprint', 'sprint', 'agile_sprint', 'scrum_sprint']) {
-    const raw = issue?.[key]
+  let sprintId = issue?.sprint_id
+
+  // On balaie toutes les propriétés liées au sprint : les plugins utilisent
+  // des noms variés (sprint, sprints, easy_sprint, easy_sprint_id…).
+  for (const [key, raw] of Object.entries(issue || {})) {
+    if (!/sprint/i.test(key)) continue
+    if (/sprint.*_id$/i.test(key)) {
+      if (sprintId === null || sprintId === undefined || sprintId === '') sprintId = raw
+      continue
+    }
     if (raw && typeof raw === 'object') {
       const sprint = sprintFromValue(raw)
       if (sprint) return sprint
@@ -178,11 +186,11 @@ export function issueSprint(issue) {
     }
   }
 
-  if (issue?.sprint_id !== null && issue?.sprint_id !== undefined && issue?.sprint_id !== '') {
+  if (sprintId !== null && sprintId !== undefined && sprintId !== '') {
     return {
       label: 'Sprint',
-      value: String(issue.sprint_name || textSprint?.value || `Sprint #${issue.sprint_id}`).trim(),
-      id: issue.sprint_id,
+      value: String(issue.sprint_name || textSprint?.value || `Sprint #${sprintId}`).trim(),
+      id: sprintId,
     }
   }
 
@@ -199,9 +207,13 @@ export function issueSprint(issue) {
     if (sprint) return sprint
   }
 
-  const version = issue?.fixed_version
+  // Certaines API exposent la version cible sous `version` ou `target_version`.
+  const version = issue?.fixed_version || issue?.version || issue?.target_version
   if (version?.name) {
     return { label: 'Sprint', value: version.name }
+  }
+  if (typeof version === 'string' && version.trim()) {
+    return { label: 'Sprint', value: version.trim() }
   }
   return null
 }

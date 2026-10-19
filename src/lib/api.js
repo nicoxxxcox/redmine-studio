@@ -205,11 +205,22 @@ export class RedmineApi {
   }
 
   issues(params = {}) {
-    return this.request('/issues.json', { query: params })
+    const query = { ...params }
+    if (!query.include) query.include = 'sprint,easy_sprint'
+    return this.request('/issues.json', { query })
   }
 
   issue(id, include = 'journals,attachments,relations,children,watchers,allowed_statuses') {
-    return this.request(`/issues/${id}.json`, { query: include ? { include } : {} })
+    const includes = new Set(
+      String(include || '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean),
+    )
+    // Certains plugins n'exposent le sprint que si on le demande explicitement.
+    includes.add('sprint')
+    includes.add('easy_sprint')
+    return this.request(`/issues/${id}.json`, { query: { include: [...includes].join(',') } })
   }
 
   createIssue(issue) {
