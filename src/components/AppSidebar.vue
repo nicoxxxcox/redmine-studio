@@ -40,7 +40,7 @@ const navItems = computed(() => [
   {
     label: 'Tous les tickets',
     icon: Ticket,
-    to: { name: 'issues' },
+    to: { name: 'issues', query: { favorites: '0' } },
     active: (route) => route.name === 'issues' && route.query.assigned_to_id !== 'me',
   },
   {

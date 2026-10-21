@@ -483,7 +483,8 @@ function disconnect() {
             <div>
               <h2 class="card-title"><Star :size="15" /> Favoris</h2>
               <p class="card-sub">
-                Ces favoris limitent les choix proposés dans les filtres des tickets et du temps.
+                Ces favoris filtrent les listes de tickets et limitent les choix des filtres. Le
+                bouton « Favoris » des listes permet de désactiver ce filtrage.
               </p>
             </div>
             <span class="favorites-total">

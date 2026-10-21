@@ -10,6 +10,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Settings2,
   SlidersHorizontal,
   Star,
   X,
@@ -40,17 +41,63 @@ const toast = useToastStore()
 const ui = useUiStore()
 const refresh = useRefreshStore()
 
+function defaultProjectFilter(favoritesEnabled) {
+  if (!favoritesEnabled) return ''
+  return settings.favoriteProjectIds.length ? 'favorites' : 'all'
+}
+
+function defaultStatusFilter(favoritesEnabled) {
+  return favoritesEnabled && settings.favoriteStatusIds.length ? 'favorites' : 'open'
+}
+
+function defaultAssigneeFilter(favoritesEnabled) {
+  if (!favoritesEnabled) return ''
+  return settings.favoriteUserIds.length ? 'favorites' : 'all'
+}
+
+function normalizeFavoriteFilterValues(favoritesEnabled) {
+  if (!favoritesEnabled) {
+    if (filters.project_id === 'favorites' || filters.project_id === 'all') filters.project_id = ''
+    if (filters.status_id === 'favorites') filters.status_id = 'open'
+    if (filters.assigned_to_id === 'favorites' || filters.assigned_to_id === 'all') {
+      filters.assigned_to_id = ''
+    }
+    return
+  }
+  if (filters.project_id === 'favorites' && !settings.favoriteProjectIds.length) {
+    filters.project_id = 'all'
+  }
+  if (filters.status_id === 'favorites' && !settings.favoriteStatusIds.length) {
+    filters.status_id = 'open'
+  }
+  if (filters.assigned_to_id === 'favorites' && !settings.favoriteUserIds.length) {
+    filters.assigned_to_id = 'all'
+  }
+}
+
+const favoritesInitiallyEnabled = settings.hasFavorites && route.query.favorites !== '0'
 const filters = reactive({
-  project_id: route.query.project_id ? String(route.query.project_id) : '',
-  status_id: route.query.status_id ? String(route.query.status_id) : 'open',
-  assigned_to_id: route.query.assigned_to_id ? String(route.query.assigned_to_id) : '',
+  project_id: route.query.project_id
+    ? String(route.query.project_id)
+    : defaultProjectFilter(favoritesInitiallyEnabled),
+  status_id: route.query.status_id
+    ? String(route.query.status_id)
+    : defaultStatusFilter(favoritesInitiallyEnabled),
+  assigned_to_id: route.query.assigned_to_id
+    ? String(route.query.assigned_to_id)
+    : defaultAssigneeFilter(favoritesInitiallyEnabled),
   priority_id: route.query.priority_id ? String(route.query.priority_id) : '',
   tracker_id: route.query.tracker_id ? String(route.query.tracker_id) : '',
   author_id: route.query.author_id ? String(route.query.author_id) : '',
   subject: route.query.subject ? String(route.query.subject) : '',
   sort: route.query.sort ? String(route.query.sort) : 'updated_on:desc',
   overdue: route.query.overdue === '1',
+  favorites: favoritesInitiallyEnabled,
 })
+
+normalizeFavoriteFilterValues(filters.favorites)
+
+const favoritesModeActive = computed(() => filters.favorites && settings.hasFavorites)
 
 const view = ref(route.query.view === 'board' ? 'board' : 'list')
 const search = ref(filters.subject)
@@ -90,7 +137,10 @@ const favoriteUsers = computed(() =>
   filterByFavorites(session.userDirectory, settings.favoriteUserIds),
 )
 const assigneeOptions = computed(() => {
-  const source = settings.favoriteUserIds.length ? favoriteUsers.value : members.value
+  const source =
+    favoritesModeActive.value && settings.favoriteUserIds.length
+      ? favoriteUsers.value
+      : members.value
   const selectedId = Number(filters.assigned_to_id)
   if (!Number.isFinite(selectedId) || selectedId <= 0) return source
   if (source.some((user) => user.id === selectedId)) return source
@@ -106,22 +156,31 @@ let urlTimer = null
 let searchTimer = null
 let applyingRoute = false
 
-const selectedProject = computed(() =>
-  session.projects.find((project) => project.id === Number(filters.project_id)),
-)
+const selectedProject = computed(() => {
+  if (!/^\d+$/.test(String(filters.project_id || ''))) return undefined
+  return session.projects.find((project) => project.id === Number(filters.project_id))
+})
 
 const favoriteProjects = computed(() =>
   filterByFavorites(session.projects, settings.favoriteProjectIds),
 )
 const projectOptions = computed(() =>
-  withSelectedOption(favoriteProjects.value, session.projects, filters.project_id),
+  withSelectedOption(
+    favoritesModeActive.value ? favoriteProjects.value : session.projects,
+    session.projects,
+    filters.project_id,
+  ),
 )
 
 const favoriteStatuses = computed(() =>
   filterByFavorites(session.statuses, settings.favoriteStatusIds),
 )
 const statusOptions = computed(() =>
-  withSelectedOption(favoriteStatuses.value, session.statuses, filters.status_id),
+  withSelectedOption(
+    favoritesModeActive.value ? favoriteStatuses.value : session.statuses,
+    session.statuses,
+    filters.status_id,
+  ),
 )
 
 const searchedIssueId = computed(() => {
@@ -131,9 +190,19 @@ const searchedIssueId = computed(() => {
 
 const activeFilterCount = computed(() => {
   let count = 0
-  if (filters.project_id) count += 1
-  if (filters.status_id && filters.status_id !== 'open') count += 1
-  if (filters.assigned_to_id) count += 1
+  if (filters.project_id && filters.project_id !== 'favorites' && filters.project_id !== 'all') {
+    count += 1
+  }
+  if (filters.status_id && filters.status_id !== 'open' && filters.status_id !== 'favorites') {
+    count += 1
+  }
+  if (
+    filters.assigned_to_id &&
+    filters.assigned_to_id !== 'favorites' &&
+    filters.assigned_to_id !== 'all'
+  ) {
+    count += 1
+  }
   if (filters.priority_id) count += 1
   if (filters.tracker_id) count += 1
   if (filters.author_id) count += 1
@@ -203,9 +272,18 @@ function sprintOf(issue) {
 function readQuery(query) {
   applyingRoute = true
   window.clearTimeout(searchTimer)
-  filters.project_id = query.project_id ? String(query.project_id) : ''
-  filters.status_id = query.status_id ? String(query.status_id) : 'open'
-  filters.assigned_to_id = query.assigned_to_id ? String(query.assigned_to_id) : ''
+  const favoritesEnabled = settings.hasFavorites && query.favorites !== '0'
+  filters.favorites = favoritesEnabled
+  filters.project_id = query.project_id
+    ? String(query.project_id)
+    : defaultProjectFilter(favoritesEnabled)
+  filters.status_id = query.status_id
+    ? String(query.status_id)
+    : defaultStatusFilter(favoritesEnabled)
+  filters.assigned_to_id = query.assigned_to_id
+    ? String(query.assigned_to_id)
+    : defaultAssigneeFilter(favoritesEnabled)
+  normalizeFavoriteFilterValues(favoritesEnabled)
   filters.priority_id = query.priority_id ? String(query.priority_id) : ''
   filters.tracker_id = query.tracker_id ? String(query.tracker_id) : ''
   filters.author_id = query.author_id ? String(query.author_id) : ''
@@ -230,6 +308,7 @@ function toRouteQuery() {
   if (filters.subject) query.subject = filters.subject
   if (filters.sort && filters.sort !== 'updated_on:desc') query.sort = filters.sort
   if (filters.overdue) query.overdue = '1'
+  if (!filters.favorites && settings.hasFavorites) query.favorites = '0'
   if (view.value === 'board') query.view = 'board'
   return query
 }
@@ -251,7 +330,7 @@ function syncUrl() {
   router.replace({ name: 'issues', query })
 }
 
-function apiParams(offset = 0) {
+function simpleApiParams(offset = 0) {
   return {
     project_id: filters.project_id || undefined,
     status_id: filters.status_id || 'open',
@@ -266,6 +345,97 @@ function apiParams(offset = 0) {
     limit: view.value === 'board' ? 100 : 50,
     offset,
   }
+}
+
+/**
+ * Redmine accepte les filtres avancés `f[]` / `op[]` / `v[]` via l'API. Ils
+ * permettent de filtrer sur plusieurs favoris à la fois, ce que les paramètres
+ * simples (`status_id=1`) ne permettent pas.
+ */
+function advancedApiParams(offset = 0) {
+  const fields = []
+  const operators = {}
+  const values = {}
+
+  function add(field, operator, list = []) {
+    fields.push(field)
+    operators[field] = operator
+    if (list.length) values[field] = list.map(String)
+  }
+
+  const favoriteProjectIds = settings.favoriteProjectIds.map(String)
+  if (filters.project_id === 'favorites') {
+    if (favoriteProjectIds.length) add('project_id', '=', favoriteProjectIds)
+  } else if (filters.project_id && filters.project_id !== 'all') {
+    add('project_id', '=', [filters.project_id])
+  }
+
+  const favoriteStatusIds = settings.favoriteStatusIds.map(String)
+  const favoriteStatusSet = new Set(favoriteStatusIds)
+  if (filters.status_id === 'favorites') {
+    if (favoriteStatusIds.length) add('status_id', '=', favoriteStatusIds)
+    else add('status_id', 'o')
+  } else if (filters.status_id === 'open') {
+    if (favoriteStatusIds.length) {
+      const openIds = session.statuses
+        .filter((status) => favoriteStatusSet.has(String(status.id)) && !status.is_closed)
+        .map((status) => status.id)
+      add('status_id', '=', openIds.length ? openIds : ['0'])
+    } else {
+      add('status_id', 'o')
+    }
+  } else if (filters.status_id === 'closed') {
+    if (favoriteStatusIds.length) {
+      const closedIds = session.statuses
+        .filter((status) => favoriteStatusSet.has(String(status.id)) && status.is_closed)
+        .map((status) => status.id)
+      add('status_id', '=', closedIds.length ? closedIds : ['0'])
+    } else {
+      add('status_id', 'c')
+    }
+  } else if (filters.status_id === '*' || filters.status_id === 'all') {
+    add('status_id', '*')
+  } else if (filters.status_id) {
+    add('status_id', '=', [filters.status_id])
+  } else {
+    add('status_id', 'o')
+  }
+
+  if (filters.assigned_to_id === 'favorites') {
+    const favoriteUserIds = settings.favoriteUserIds.map(String)
+    if (favoriteUserIds.length) add('assigned_to_id', '=', favoriteUserIds)
+  } else if (filters.assigned_to_id === 'me') {
+    add('assigned_to_id', '=', ['me'])
+  } else if (filters.assigned_to_id === '!*' || filters.assigned_to_id === 'unassigned') {
+    add('assigned_to_id', '!*')
+  } else if (filters.assigned_to_id && filters.assigned_to_id !== 'all') {
+    add('assigned_to_id', '=', [filters.assigned_to_id])
+  }
+
+  if (filters.priority_id) add('priority_id', '=', [filters.priority_id])
+  if (filters.tracker_id) add('tracker_id', '=', [filters.tracker_id])
+  if (filters.author_id === 'me') add('author_id', '=', ['me'])
+  else if (filters.author_id) add('author_id', '=', [filters.author_id])
+
+  if (searchedIssueId.value) add('issue_id', '=', [searchedIssueId.value])
+  else if (filters.subject) add('subject', '~', [filters.subject])
+  if (filters.overdue) add('due_date', '<', [toIsoDate()])
+
+  const params = {
+    sort: filters.sort,
+    limit: view.value === 'board' ? 100 : 50,
+    offset,
+    'f[]': fields,
+  }
+  for (const field of fields) {
+    params[`op[${field}]`] = operators[field]
+    if (values[field]?.length) params[`v[${field}][]`] = values[field]
+  }
+  return params
+}
+
+function apiParams(offset = 0) {
+  return favoritesModeActive.value ? advancedApiParams(offset) : simpleApiParams(offset)
 }
 
 async function load({ append = false } = {}) {
@@ -331,7 +501,7 @@ function scheduleUrlSync() {
 }
 
 async function loadMembers() {
-  if (!filters.project_id) {
+  if (!/^\d+$/.test(String(filters.project_id || ''))) {
     members.value = []
     return
   }
@@ -402,10 +572,57 @@ watch(
   { immediate: true },
 )
 
+watch(
+  () => settings.hasFavorites,
+  (hasFavorites) => {
+    if (hasFavorites) return
+    filters.favorites = false
+    if (filters.project_id === 'favorites' || filters.project_id === 'all') filters.project_id = ''
+    if (filters.status_id === 'favorites') filters.status_id = 'open'
+    if (filters.assigned_to_id === 'favorites' || filters.assigned_to_id === 'all') {
+      filters.assigned_to_id = ''
+    }
+  },
+)
+
+watch(
+  () => settings.favoriteProjectIds.length,
+  (length) => {
+    if (!length && filters.project_id === 'favorites') {
+      filters.project_id = filters.favorites ? 'all' : ''
+    }
+  },
+)
+
+watch(
+  () => settings.favoriteStatusIds.length,
+  (length) => {
+    if (!length && filters.status_id === 'favorites') filters.status_id = 'open'
+  },
+)
+
+watch(
+  () => settings.favoriteUserIds.length,
+  (length) => {
+    if (!length && filters.assigned_to_id === 'favorites') {
+      filters.assigned_to_id = filters.favorites ? 'all' : ''
+    }
+  },
+)
+
 function resetFilters() {
-  filters.project_id = ''
-  filters.status_id = 'open'
-  filters.assigned_to_id = ''
+  filters.project_id = favoritesModeActive.value
+    ? settings.favoriteProjectIds.length
+      ? 'favorites'
+      : 'all'
+    : ''
+  filters.status_id =
+    favoritesModeActive.value && settings.favoriteStatusIds.length ? 'favorites' : 'open'
+  filters.assigned_to_id = favoritesModeActive.value
+    ? settings.favoriteUserIds.length
+      ? 'favorites'
+      : 'all'
+    : ''
   filters.priority_id = ''
   filters.tracker_id = ''
   filters.author_id = ''
@@ -414,6 +631,24 @@ function resetFilters() {
   filters.overdue = false
   search.value = ''
   advancedOpen.value = false
+}
+
+function toggleFavoritesMode() {
+  if (!settings.hasFavorites) return
+  if (filters.favorites) {
+    filters.favorites = false
+    if (filters.project_id === 'favorites' || filters.project_id === 'all') filters.project_id = ''
+    if (filters.status_id === 'favorites') filters.status_id = 'open'
+    if (filters.assigned_to_id === 'favorites' || filters.assigned_to_id === 'all') {
+      filters.assigned_to_id = ''
+    }
+    return
+  }
+
+  filters.favorites = true
+  filters.project_id = settings.favoriteProjectIds.length ? 'favorites' : 'all'
+  filters.status_id = settings.favoriteStatusIds.length ? 'favorites' : 'open'
+  filters.assigned_to_id = settings.favoriteUserIds.length ? 'favorites' : 'all'
 }
 
 function toggleQuick(key) {
@@ -426,7 +661,9 @@ function toggleQuick(key) {
   } else if (key === 'created') {
     filters.author_id = filters.author_id === 'me' ? '' : 'me'
   } else if (key === 'open') {
-    filters.status_id = filters.status_id === 'open' ? '*' : 'open'
+    const defaultStatus =
+      favoritesModeActive.value && settings.favoriteStatusIds.length ? 'favorites' : 'open'
+    filters.status_id = filters.status_id === '*' ? defaultStatus : '*'
   }
 }
 
@@ -435,8 +672,11 @@ function setView(nextView) {
 }
 
 function openComposer(status = null) {
+  const projectId = /^\d+$/.test(String(filters.project_id || ''))
+    ? Number(filters.project_id)
+    : null
   ui.openIssueComposer({
-    projectId: filters.project_id || null,
+    projectId,
     statusId: status?.id || null,
   })
 }
@@ -563,12 +803,19 @@ watch(() => refresh.issueVersion, () => load())
           class="select filter-select"
           aria-label="Projet"
           :title="
-            settings.favoriteProjectIds.length
+            favoritesModeActive
               ? 'Projets limités à vos favoris'
               : 'Filtrer par projet'
           "
         >
-          <option value="">Tous les projets</option>
+          <option v-if="favoritesModeActive" value="all">Tous les projets</option>
+          <option v-else value="">Tous les projets</option>
+          <option
+            v-if="favoritesModeActive && settings.favoriteProjectIds.length"
+            value="favorites"
+          >
+            Projets favoris ({{ settings.favoriteProjectIds.length }})
+          </option>
           <option v-for="project in projectOptions" :key="project.id" :value="String(project.id)">
             {{ project.name }}
           </option>
@@ -579,13 +826,31 @@ watch(() => refresh.issueVersion, () => load())
           class="select filter-select filter-status"
           aria-label="Statut"
           :title="
-            settings.favoriteStatusIds.length
+            favoritesModeActive
               ? 'Statuts limités à vos favoris'
               : 'Filtrer par statut'
           "
         >
-          <option value="open">Statuts ouverts</option>
-          <option value="closed">Statuts fermés</option>
+          <option
+            v-if="favoritesModeActive && settings.favoriteStatusIds.length"
+            value="favorites"
+          >
+            Statuts favoris ({{ settings.favoriteStatusIds.length }})
+          </option>
+          <option value="open">
+            {{
+              favoritesModeActive && settings.favoriteStatusIds.length
+                ? 'Statuts ouverts favoris'
+                : 'Statuts ouverts'
+            }}
+          </option>
+          <option value="closed">
+            {{
+              favoritesModeActive && settings.favoriteStatusIds.length
+                ? 'Statuts fermés favoris'
+                : 'Statuts fermés'
+            }}
+          </option>
           <option value="*">Tous les statuts</option>
           <option v-for="status in statusOptions" :key="status.id" :value="String(status.id)">
             {{ status.name }}
@@ -598,12 +863,19 @@ watch(() => refresh.issueVersion, () => load())
           aria-label="Assigné à"
           :disabled="loadingMembers && !settings.favoriteUserIds.length"
           :title="
-            settings.favoriteUserIds.length
+            favoritesModeActive
               ? 'Utilisateurs limités à vos favoris'
               : 'Filtrer par assigné'
           "
         >
-          <option value="">Toute l'équipe</option>
+          <option
+            v-if="favoritesModeActive && settings.favoriteUserIds.length"
+            value="favorites"
+          >
+            Utilisateurs favoris ({{ settings.favoriteUserIds.length }})
+          </option>
+          <option v-if="favoritesModeActive" value="all">Toute l'équipe</option>
+          <option v-else value="">Toute l'équipe</option>
           <option value="me">Moi</option>
           <option value="!*">Non assigné</option>
           <option v-for="member in assigneeOptions" :key="member.id" :value="String(member.id)">
@@ -664,13 +936,29 @@ watch(() => refresh.issueVersion, () => load())
         >
           Tous les statuts
         </button>
-        <RouterLink
+        <button
           v-if="settings.hasFavorites"
+          type="button"
           class="quick-chip favorites-shortcut"
-          :to="{ name: 'settings' }"
-          title="Les menus de filtres sont limités à vos favoris. Cliquez pour les modifier."
+          :class="{ 'is-active': favoritesModeActive }"
+          :aria-pressed="favoritesModeActive"
+          :title="
+            favoritesModeActive
+              ? 'Désactiver le filtrage par favoris'
+              : 'Activer le filtrage par favoris'
+          "
+          @click="toggleFavoritesMode"
         >
           <Star :size="11" /> Favoris
+        </button>
+        <RouterLink
+          v-if="settings.hasFavorites"
+          class="favorites-manage"
+          :to="{ name: 'settings' }"
+          title="Gérer les favoris"
+          aria-label="Gérer les favoris"
+        >
+          <Settings2 :size="12" />
         </RouterLink>
         <button
           v-if="activeFilterCount"
@@ -1095,7 +1383,27 @@ watch(() => refresh.issueVersion, () => load())
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  border-color: color-mix(in srgb, var(--accent) 24%, var(--line));
+}
+
+.favorites-shortcut.is-active {
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.favorites-manage {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--faint);
+}
+
+.favorites-manage:hover {
+  border-color: var(--line-strong);
   color: var(--accent);
 }
 
