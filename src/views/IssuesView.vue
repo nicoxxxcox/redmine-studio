@@ -720,6 +720,7 @@ watch(() => refresh.issueVersion, () => load())
             :key="issue.id"
             :issue="issue"
             :status-busy="statusSaving.has(issue.id)"
+            :subject-link-only="filters.assigned_to_id === 'me'"
             @change-status="changeStatus(issue, $event)"
           />
         </template>

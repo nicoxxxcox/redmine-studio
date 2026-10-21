@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { Milestone } from 'lucide-vue-next'
 import {
   formatDate,
@@ -20,6 +21,7 @@ const props = defineProps({
   issue: { type: Object, required: true },
   compact: { type: Boolean, default: false },
   statusBusy: { type: Boolean, default: false },
+  subjectLinkOnly: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['change-status'])
@@ -34,14 +36,24 @@ const assigneeName = computed(() => {
 </script>
 
 <template>
-  <RouterLink
-    :to="{ name: 'issue', params: { id: issue.id } }"
+  <component
+    :is="subjectLinkOnly ? 'div' : RouterLink"
+    :to="subjectLinkOnly ? undefined : { name: 'issue', params: { id: issue.id } }"
     class="issue-row issues-grid"
-    :class="{ 'is-overdue': overdue, 'is-compact': compact }"
+    :class="{
+      'is-overdue': overdue,
+      'is-compact': compact,
+      'is-subject-only': subjectLinkOnly,
+    }"
   >
     <IssueId :id="issue.id" class="row-id" />
 
-    <span class="row-subject">
+    <component
+      :is="subjectLinkOnly ? RouterLink : 'span'"
+      :to="subjectLinkOnly ? { name: 'issue', params: { id: issue.id } } : undefined"
+      class="row-subject"
+      :class="{ 'row-subject-link': subjectLinkOnly }"
+    >
       <span class="subject-line">{{ issue.subject }}</span>
       <span class="subject-meta">
         <span v-if="issue.project" class="project-name">{{ issue.project.name }}</span>
@@ -61,7 +73,7 @@ const assigneeName = computed(() => {
           {{ formatDate(issue.due_date, { year: undefined }) }}
         </span>
       </span>
-    </span>
+    </component>
 
     <span class="row-status">
       <StatusQuickSelect
@@ -95,7 +107,7 @@ const assigneeName = computed(() => {
     <span class="row-updated" :title="formatDateTime(issue.updated_on)">
       {{ relativeTime(issue.updated_on) }}
     </span>
-  </RouterLink>
+  </component>
 </template>
 
 <style scoped>
@@ -116,6 +128,10 @@ const assigneeName = computed(() => {
 .issue-row:hover {
   background: var(--surface-hover);
   text-decoration: none;
+}
+
+.issue-row.is-subject-only {
+  cursor: default;
 }
 
 .issue-row.is-overdue::before {
@@ -142,6 +158,23 @@ const assigneeName = computed(() => {
   gap: 2px;
 }
 
+.row-subject-link {
+  color: inherit;
+  text-decoration: none;
+  border-radius: 4px;
+}
+
+.row-subject-link:hover .subject-line {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.row-subject-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .subject-line {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -151,7 +184,7 @@ const assigneeName = computed(() => {
   letter-spacing: -0.005em;
 }
 
-.issue-row:hover .subject-line {
+.issue-row:not(.is-subject-only):hover .subject-line {
   color: var(--accent);
 }
 
