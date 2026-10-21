@@ -14,7 +14,8 @@ toutes les requêtes passent par le petit proxy same-origin intégré à l'appli
 - **Tickets** : liste filtrable (projet, statut, assigné, priorité, tracker, auteur, retard,
   recherche), changement de statut rapide depuis chaque ligne, numéro copiable en un clic, une
   couleur distincte par statut, sprint (plugin Scrum, sinon version cible) visible dans la liste,
-  le kanban et le détail, tableau kanban avec changement de statut par glisser-déposer.
+  le kanban et le détail, tableau kanban avec changement de statut par glisser-déposer et
+  filtrage des colonnes de statut affichées.
 - **Détail d'un ticket** : changement de statut rapide dans l'en-tête, sujet et description
   éditables avec un éditeur enrichi (gras, italique, titres, listes, citations, code, liens et
   bascule vers la source Textile), propriétés (statut, priorité, assigné, tracker, version, dates,

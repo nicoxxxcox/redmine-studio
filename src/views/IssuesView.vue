@@ -114,7 +114,9 @@ const activeFilterCount = computed(() => {
 
 const hasMore = computed(() => view.value === 'list' && issues.value.length < total.value)
 
-const boardColumns = computed(() => {
+const hiddenBoardStatuses = ref(new Set())
+
+const boardStatusOptions = computed(() => {
   const present = new Set(issues.value.map((issue) => issue.status?.id).filter(Boolean))
   const columns = session.statuses.filter((status) => !status.is_closed || present.has(status.id))
   const known = new Set(columns.map((status) => status.id))
@@ -127,6 +129,15 @@ const boardColumns = computed(() => {
   return columns
 })
 
+const boardColumns = computed(() =>
+  boardStatusOptions.value.filter((status) => !hiddenBoardStatuses.value.has(status.id)),
+)
+
+const hiddenBoardIssueCount = computed(() => {
+  const visible = new Set(boardColumns.value.map((status) => status.id))
+  return issues.value.filter((issue) => !visible.has(issue.status?.id)).length
+})
+
 function statusDotStyle(status) {
   const hue = statusHue(status, session.statuses)
   return hue === null ? {} : { '--status-hue': hue }
@@ -134,6 +145,21 @@ function statusDotStyle(status) {
 
 function issuesForStatus(statusId) {
   return issues.value.filter((issue) => issue.status?.id === statusId)
+}
+
+function isBoardStatusVisible(statusId) {
+  return !hiddenBoardStatuses.value.has(statusId)
+}
+
+function toggleBoardStatus(statusId) {
+  const next = new Set(hiddenBoardStatuses.value)
+  if (next.has(statusId)) next.delete(statusId)
+  else next.add(statusId)
+  hiddenBoardStatuses.value = next
+}
+
+function showAllBoardStatuses() {
+  hiddenBoardStatuses.value = new Set()
 }
 
 function sprintOf(issue) {
@@ -761,7 +787,35 @@ watch(() => refresh.issueVersion, () => load())
     </div>
 
     <div v-else class="board-wrap">
-      <div class="board">
+      <div class="board-toolbar">
+        <span class="board-toolbar-label">Statuts affichés</span>
+        <div class="board-status-filters" role="group" aria-label="Filtrer les colonnes par statut">
+          <button
+            v-for="status in boardStatusOptions"
+            :key="status.id"
+            type="button"
+            class="board-status-chip"
+            :class="{ 'is-active': isBoardStatusVisible(status.id) }"
+            :aria-pressed="isBoardStatusVisible(status.id)"
+            :title="`${isBoardStatusVisible(status.id) ? 'Masquer' : 'Afficher'} le statut ${status.name}`"
+            @click="toggleBoardStatus(status.id)"
+          >
+            <span class="board-status-dot" :style="statusDotStyle(status)"></span>
+            <span class="board-chip-name">{{ status.name }}</span>
+            <span class="board-count">{{ issuesForStatus(status.id).length }}</span>
+          </button>
+        </div>
+        <button
+          v-if="hiddenBoardStatuses.size"
+          class="board-status-reset"
+          type="button"
+          @click="showAllBoardStatuses"
+        >
+          Tout afficher
+        </button>
+      </div>
+
+      <div v-if="boardColumns.length" class="board">
         <section
           v-for="status in boardColumns"
           :key="status.id"
@@ -829,6 +883,24 @@ watch(() => refresh.issueVersion, () => load())
           </div>
         </section>
       </div>
+
+      <EmptyState
+        v-else
+        :icon="Inbox"
+        title="Aucun statut affiché"
+        text="Réactivez au moins un statut pour afficher les colonnes et les tickets du tableau."
+      >
+        <button class="btn btn-sm" type="button" @click="showAllBoardStatuses">
+          <X :size="13" /> Tout afficher
+        </button>
+      </EmptyState>
+
+      <p v-if="hiddenBoardIssueCount" class="board-note">
+        {{ hiddenBoardIssueCount }} ticket{{ hiddenBoardIssueCount > 1 ? 's' : '' }} masqué{{
+          hiddenBoardIssueCount > 1 ? 's' : ''
+        }}
+        par le filtre de statut.
+      </p>
       <p v-if="total > issues.length" class="board-note">
         {{ issues.length }} tickets affichés sur {{ total }}. Affinez les filtres pour voir les
         autres.
@@ -1045,6 +1117,98 @@ watch(() => refresh.issueVersion, () => load())
 
 .board-wrap {
   min-width: 0;
+}
+
+.board-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  margin-bottom: 10px;
+}
+
+.board-toolbar-label {
+  flex: none;
+  color: var(--faint);
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.board-status-filters {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 1px;
+  scrollbar-width: none;
+}
+
+.board-status-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.board-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 550;
+  transition: all var(--transition);
+}
+
+.board-status-chip:hover {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.board-status-chip.is-active {
+  border-color: color-mix(in srgb, var(--accent) 26%, var(--line));
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.board-status-chip:not(.is-active) {
+  border-style: dashed;
+  background: transparent;
+  opacity: 0.55;
+}
+
+.board-status-chip .board-status-dot {
+  width: 6px;
+  height: 6px;
+}
+
+.board-status-chip .board-count {
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 9px;
+}
+
+.board-status-reset {
+  flex: none;
+  margin-left: auto;
+  padding: 3px 5px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--accent);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.board-status-reset:hover {
+  background: var(--accent-soft);
 }
 
 .board {
@@ -1317,6 +1481,9 @@ watch(() => refresh.issueVersion, () => load())
 }
 
 @media (max-width: 640px) {
+  .board-toolbar-label {
+    display: none;
+  }
   .filters-advanced {
     grid-template-columns: minmax(0, 1fr);
   }
