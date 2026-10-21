@@ -94,6 +94,11 @@ const selectedProject = computed(() =>
   session.projects.find((project) => project.id === Number(filters.project_id)),
 )
 
+const searchedIssueId = computed(() => {
+  const match = /^#?(\d+)$/.exec(String(filters.subject || '').trim())
+  return match ? match[1] : ''
+})
+
 const activeFilterCount = computed(() => {
   let count = 0
   if (filters.project_id) count += 1
@@ -194,7 +199,8 @@ function apiParams(offset = 0) {
     priority_id: filters.priority_id || undefined,
     tracker_id: filters.tracker_id || undefined,
     author_id: filters.author_id || undefined,
-    subject: filters.subject ? `~${filters.subject}` : undefined,
+    subject: !searchedIssueId.value && filters.subject ? `~${filters.subject}` : undefined,
+    issue_id: searchedIssueId.value || undefined,
     due_date: filters.overdue ? `<${toIsoDate()}` : undefined,
     sort: filters.sort,
     limit: view.value === 'board' ? 100 : 50,
@@ -470,8 +476,8 @@ watch(() => refresh.issueVersion, () => load())
             v-model="search"
             class="input"
             type="search"
-            placeholder="Rechercher un sujet…"
-            aria-label="Rechercher un ticket"
+            placeholder="Rechercher un sujet ou un n°…"
+            aria-label="Rechercher un ticket par sujet ou numéro"
           />
           <button
             v-if="search"

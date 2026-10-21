@@ -101,15 +101,54 @@ watch(query, (value) => {
 
 async function search(term) {
   const current = ++sequence
+  const clean = term.trim()
+  if (!clean) {
+    results.value = []
+    loading.value = false
+    return
+  }
   loading.value = true
   try {
-    const data = await settings.api.issues({
-      subject: `~${term.trim()}`,
-      status_id: '*',
-      limit: 8,
-      sort: 'updated_on:desc',
-    })
-    if (current === sequence) results.value = data?.issues || []
+    const idMatch = /^#?(\d+)$/.exec(clean)
+    if (idMatch) {
+      // Un numéro saisi doit retrouver le ticket même s'il est fermé.
+      // On garde aussi la recherche par sujet pour les numéros présents
+      // dans un libellé.
+      const [byId, bySubject] = await Promise.allSettled([
+        settings.api.issues({
+          issue_id: idMatch[1],
+          status_id: '*',
+          limit: 8,
+          sort: 'updated_on:desc',
+        }),
+        settings.api.issues({
+          subject: `~${clean.replace(/^#/, '')}`,
+          status_id: '*',
+          limit: 8,
+          sort: 'updated_on:desc',
+        }),
+      ])
+      if (current !== sequence) return
+      const merged = []
+      const seen = new Set()
+      for (const result of [byId, bySubject]) {
+        if (result.status !== 'fulfilled') continue
+        for (const issue of result.value?.issues || []) {
+          if (seen.has(issue.id)) continue
+          seen.add(issue.id)
+          merged.push(issue)
+        }
+      }
+      results.value = merged.slice(0, 8)
+    } else {
+      const data = await settings.api.issues({
+        subject: `~${clean}`,
+        status_id: '*',
+        limit: 8,
+        sort: 'updated_on:desc',
+      })
+      if (current === sequence) results.value = data?.issues || []
+    }
   } catch {
     if (current === sequence) results.value = []
   } finally {
@@ -166,7 +205,7 @@ onBeforeUnmount(() => window.clearTimeout(debounceTimer))
               ref="input"
               v-model="query"
               type="text"
-              placeholder="Rechercher un ticket, ou naviguer…"
+              placeholder="Rechercher un ticket (sujet ou n°), ou naviguer…"
               autocomplete="off"
               @keydown="onKeydown"
             />
