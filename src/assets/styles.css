@@ -54,6 +54,7 @@
   --radius-xl: 22px;
 
   --sidebar-w: 252px;
+  --sidebar-w-collapsed: 74px;
   --topbar-h: 68px;
 
   --ease: cubic-bezier(0.22, 0.68, 0.26, 1);

@@ -83,7 +83,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :class="{ 'is-sidebar-collapsed': ui.sidebarCollapsed }">
     <AppSidebar />
     <div class="app-main">
       <AppTopbar />
@@ -119,11 +119,18 @@ onBeforeUnmount(() => {
   min-height: 100vh;
   margin-left: var(--sidebar-w);
   min-width: 0;
+  transition: margin-left 220ms var(--ease);
 }
 
 .app-content {
   flex: 1;
   min-width: 0;
+}
+
+@media (min-width: 981px) {
+  .app-shell.is-sidebar-collapsed .app-main {
+    margin-left: var(--sidebar-w-collapsed);
+  }
 }
 
 @media (max-width: 980px) {

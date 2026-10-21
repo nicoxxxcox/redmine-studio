@@ -7,6 +7,8 @@ import { useUiStore } from '../stores/ui.js'
 import UserAvatar from './UserAvatar.vue'
 import {
   BarChart3,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   FolderKanban,
   Inbox,
@@ -74,9 +76,33 @@ async function logout() {
 </script>
 
 <template>
-  <aside class="sidebar" :class="{ 'is-open': ui.sidebarOpen }" aria-label="Navigation principale">
+  <aside
+    id="app-sidebar"
+    class="sidebar"
+    :class="{ 'is-open': ui.sidebarOpen, 'is-collapsed': ui.sidebarCollapsed }"
+    aria-label="Navigation principale"
+  >
+    <button
+      class="sidebar-toggle"
+      type="button"
+      :title="ui.sidebarCollapsed ? 'Déplier la barre latérale' : 'Replier la barre latérale'"
+      :aria-label="ui.sidebarCollapsed ? 'Déplier la barre latérale' : 'Replier la barre latérale'"
+      aria-controls="app-sidebar"
+      :aria-expanded="!ui.sidebarCollapsed"
+      @click="ui.toggleSidebarCollapsed()"
+    >
+      <ChevronRight v-if="ui.sidebarCollapsed" :size="14" />
+      <ChevronLeft v-else :size="14" />
+    </button>
+
     <div class="sidebar-head">
-      <RouterLink :to="{ name: 'dashboard' }" class="brand" @click="ui.toggleSidebar(false)">
+      <RouterLink
+        :to="{ name: 'dashboard' }"
+        class="brand"
+        :title="ui.sidebarCollapsed ? 'Redmine Studio — Tableau de bord' : undefined"
+        aria-label="Redmine Studio — Tableau de bord"
+        @click="ui.toggleSidebar(false)"
+      >
         <span class="brand-mark" aria-hidden="true">
           <svg viewBox="0 0 64 64" width="26" height="26">
             <rect width="64" height="64" rx="17" fill="currentColor" opacity=".16" />
@@ -110,6 +136,8 @@ async function logout() {
           type="button"
           class="nav-item"
           :class="{ 'is-active': isActive(item) }"
+          :title="ui.sidebarCollapsed ? item.label : undefined"
+          :aria-label="item.label"
           @click="go(item.to)"
         >
           <component :is="item.icon" :size="16.5" class="nav-icon" />
@@ -123,13 +151,15 @@ async function logout() {
         type="button"
         class="nav-item"
         :class="{ 'is-active': router.currentRoute.value.name === 'settings' }"
+        :title="ui.sidebarCollapsed ? 'Paramètres' : undefined"
+        aria-label="Paramètres"
         @click="go({ name: 'settings' })"
       >
         <Settings2 :size="16.5" class="nav-icon" />
         <span>Paramètres</span>
       </button>
 
-      <div class="sidebar-user">
+      <div class="sidebar-user" :title="ui.sidebarCollapsed ? session.displayName || 'Utilisateur' : undefined">
         <UserAvatar :name="session.displayName" :size="32" />
         <div class="sidebar-user-text">
           <span class="strong truncate">{{ session.displayName || 'Utilisateur' }}</span>
@@ -143,7 +173,11 @@ async function logout() {
         </button>
       </div>
 
-      <div class="sidebar-status">
+      <div
+        class="sidebar-status"
+        :title="ui.sidebarCollapsed ? 'API Redmine connectée' : undefined"
+        :aria-label="ui.sidebarCollapsed ? 'API Redmine connectée' : undefined"
+      >
         <span class="status-dot"></span>
         <span class="truncate">API Redmine connectée</span>
         <span class="text-xs faint">3.4+</span>
@@ -166,6 +200,40 @@ async function logout() {
   width: var(--sidebar-w);
   background: var(--surface);
   border-right: 1px solid var(--line);
+  transition: width 220ms var(--ease);
+}
+
+.sidebar-toggle {
+  position: absolute;
+  top: 26px;
+  right: -11px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  box-shadow: var(--shadow-xs);
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    border-color var(--transition),
+    color var(--transition);
+}
+
+.sidebar-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--surface);
+}
+
+.sidebar-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .sidebar-head {
@@ -351,6 +419,76 @@ async function logout() {
   backdrop-filter: blur(2px);
 }
 
+@media (min-width: 981px) {
+  .sidebar.is-collapsed {
+    width: var(--sidebar-w-collapsed);
+  }
+
+  .sidebar.is-collapsed .sidebar-head {
+    justify-content: center;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .sidebar.is-collapsed .brand {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .sidebar.is-collapsed .brand-text {
+    display: none;
+  }
+
+  .sidebar.is-collapsed .sidebar-scroll {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+
+  .sidebar.is-collapsed .nav-label {
+    display: none;
+  }
+
+  .sidebar.is-collapsed .nav-item {
+    justify-content: center;
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .sidebar.is-collapsed .nav-item > span {
+    display: none;
+  }
+
+  .sidebar.is-collapsed .sidebar-foot {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+
+  .sidebar.is-collapsed .sidebar-user {
+    flex-direction: column;
+    gap: 5px;
+    padding: 8px 4px;
+  }
+
+  .sidebar.is-collapsed .sidebar-user-text {
+    display: none;
+  }
+
+  .sidebar.is-collapsed .sidebar-user .btn {
+    width: 28px;
+    min-height: 28px;
+    height: 28px;
+  }
+
+  .sidebar.is-collapsed .sidebar-status {
+    justify-content: center;
+    padding: 8px 0 0;
+  }
+
+  .sidebar.is-collapsed .sidebar-status > span:not(.status-dot) {
+    display: none;
+  }
+}
+
 @media (max-width: 980px) {
   .sidebar {
     transform: translateX(-100%);
@@ -362,6 +500,9 @@ async function logout() {
   }
   .sidebar-close {
     display: grid;
+  }
+  .sidebar-toggle {
+    display: none;
   }
   .sidebar-backdrop {
     display: block;
