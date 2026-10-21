@@ -391,11 +391,12 @@ export class RedmineApi {
   }
 
   async fetchAttachment(attachment, { thumbnail = false, thumbnailSize = 400 } = {}) {
-    let url = thumbnail
-      ? attachment?.thumbnail_url || attachment?.content_url
-      : attachment?.content_url
+    const generatedThumbnail = thumbnail && attachment?.thumbnail_url
+    let url = generatedThumbnail ? attachment.thumbnail_url : attachment?.content_url
     if (!url) throw new ApiError('Fichier introuvable.')
-    if (thumbnail && thumbnailSize && !/[?&]size=/.test(url)) {
+    // Les SVG et certains fichiers n'ont pas de miniature Redmine : on
+    // charge alors le fichier original sans paramètre de redimensionnement.
+    if (generatedThumbnail && thumbnailSize && !/[?&]size=/.test(url)) {
       url += `${url.includes('?') ? '&' : '?'}size=${thumbnailSize}`
     }
     const response = await fetch(PREFIX + this.attachmentPath(url), {

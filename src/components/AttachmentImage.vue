@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ImageOff, Loader2 } from 'lucide-vue-next'
 import { useSettingsStore } from '../stores/settings.js'
+import { isSvgAttachment } from '../lib/format.js'
 
 const props = defineProps({
   attachment: { type: Object, required: true },
@@ -20,6 +21,7 @@ const pending = ref(true)
 const ready = ref(false)
 const failed = ref(false)
 const altText = computed(() => props.alt || props.attachment?.filename || 'Image')
+const svg = computed(() => isSvgAttachment(props.attachment))
 
 let objectUrl = ''
 let loadId = 0
@@ -111,7 +113,7 @@ onBeforeUnmount(() => {
   <span
     ref="root"
     class="attachment-image"
-    :class="[`is-${fit}`, { 'is-ready': ready, 'is-failed': failed }]"
+    :class="[`is-${fit}`, { 'is-ready': ready, 'is-failed': failed, 'is-svg': svg }]"
   >
     <img
       v-if="displayUrl && !failed"
@@ -161,6 +163,10 @@ onBeforeUnmount(() => {
   object-fit: cover;
 }
 
+.attachment-image.is-svg.is-cover img {
+  object-fit: contain;
+}
+
 .attachment-image.is-contain img {
   object-fit: contain;
 }
@@ -195,9 +201,26 @@ onBeforeUnmount(() => {
   object-fit: contain;
 }
 
+.attachment-image.is-natural.is-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.attachment-image.is-natural.is-svg img {
+  width: 100%;
+  height: 100%;
+}
+
 .attachment-image.is-natural .attachment-image-state {
   position: static;
   min-width: 64px;
   min-height: 64px;
+}
+
+.attachment-image.is-natural.is-svg .attachment-image-state {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
+  min-height: 0;
 }
 </style>

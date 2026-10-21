@@ -165,6 +165,29 @@ const imageAttachments = computed(() => attachments.value.filter(isImageAttachme
 const fileAttachments = computed(() =>
   attachments.value.filter((attachment) => !isImageAttachment(attachment)),
 )
+const journalAttachmentsById = computed(() => {
+  const byId = new Map(attachments.value.map((attachment) => [String(attachment.id), attachment]))
+  const result = new Map()
+  for (const journal of journals.value) {
+    const seen = new Set()
+    const all = []
+    for (const detail of journal.details || []) {
+      if (detail.property !== 'attachment' || !detail.new_value) continue
+      const key = String(detail.name || '')
+      if (!key || seen.has(key)) continue
+      const attachment = byId.get(key)
+      if (!attachment) continue
+      seen.add(key)
+      all.push(attachment)
+    }
+    result.set(journal.id, {
+      all,
+      images: all.filter(isImageAttachment),
+      files: all.filter((attachment) => !isImageAttachment(attachment)),
+    })
+  }
+  return result
+})
 const relations = computed(() => issue.value?.relations || [])
 const children = computed(() => issue.value?.children || [])
 
@@ -224,6 +247,44 @@ function notePreview(journal) {
 
 function journalSummary(journal) {
   return (journal.details || []).map((detail) => detailText(detail)).join(' · ')
+}
+
+function journalAttachmentGroup(journal) {
+  return (
+    journalAttachmentsById.value.get(journal.id) || {
+      all: [],
+      images: [],
+      files: [],
+    }
+  )
+}
+
+function journalAttachments(journal) {
+  return journalAttachmentGroup(journal).all
+}
+
+function journalImageAttachments(journal) {
+  return journalAttachmentGroup(journal).images
+}
+
+function journalFileAttachments(journal) {
+  return journalAttachmentGroup(journal).files
+}
+
+function journalChangeDetails(journal) {
+  // Les ajouts de pièces jointes sont affichés sous forme de vignettes :
+  // on évite de répéter « Pièce jointe : … » dans le résumé des changements.
+  const displayed = new Set(
+    journalAttachments(journal).map((attachment) => String(attachment.id)),
+  )
+  return (journal.details || []).filter(
+    (detail) =>
+      !(
+        detail.property === 'attachment' &&
+        detail.new_value &&
+        displayed.has(String(detail.name))
+      ),
+  )
 }
 
 function canEditJournal(journal) {
@@ -1053,7 +1114,7 @@ onBeforeUnmount(() => {
                 <span class="attachment-preview-media">
                   <AttachmentImage :attachment="attachment" :alt="attachment.filename" />
                   <span class="attachment-preview-zoom" aria-hidden="true">
-                    <Maximize2 :size="14" />
+                    <Maximize2 :size="12" />
                   </span>
                 </span>
                 <span class="attachment-preview-name">
@@ -1184,8 +1245,12 @@ onBeforeUnmount(() => {
                     </button>
 
                     <template v-else>
-                      <div v-if="journal.details?.length" class="journal-changes">
-                        <span v-for="(detail, index) in journal.details" :key="index" class="journal-change">
+                      <div v-if="journalChangeDetails(journal).length" class="journal-changes">
+                        <span
+                          v-for="(detail, index) in journalChangeDetails(journal)"
+                          :key="index"
+                          class="journal-change"
+                        >
                           {{ detailText(detail) }}
                         </span>
                       </div>
@@ -1221,6 +1286,41 @@ onBeforeUnmount(() => {
                       </div>
                       <div v-else class="journal-note">
                         <MarkdownBody :source="journal.notes" />
+                      </div>
+
+                      <div v-if="journalAttachments(journal).length" class="journal-attachments">
+                        <button
+                          v-for="attachment in journalImageAttachments(journal)"
+                          :key="attachment.id"
+                          type="button"
+                          class="attachment-preview"
+                          :title="`Ouvrir l’aperçu de ${attachment.filename}`"
+                          @click="openImageViewer(attachment)"
+                        >
+                          <span class="attachment-preview-media">
+                            <AttachmentImage :attachment="attachment" :alt="attachment.filename" />
+                            <span class="attachment-preview-zoom" aria-hidden="true">
+                              <Maximize2 :size="12" />
+                            </span>
+                          </span>
+                          <span class="attachment-preview-name">
+                            <span class="truncate">{{ attachment.filename }}</span>
+                          </span>
+                        </button>
+
+                        <button
+                          v-for="attachment in journalFileAttachments(journal)"
+                          :key="attachment.id"
+                          type="button"
+                          class="attachment-chip"
+                          :title="`Télécharger ${attachment.filename}`"
+                          @click="downloadAttachment(attachment)"
+                        >
+                          <Paperclip :size="12" />
+                          <span class="truncate">{{ attachment.filename }}</span>
+                          <span class="faint">{{ formatFileSize(attachment.filesize) }}</span>
+                          <Download :size="12" class="attachment-dl" />
+                        </button>
                       </div>
                     </template>
                   </div>
@@ -1980,6 +2080,7 @@ onBeforeUnmount(() => {
 .description-image-grid {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 8px;
   padding: 0 18px 14px;
 }
@@ -1987,7 +2088,7 @@ onBeforeUnmount(() => {
 .attachment-preview {
   display: flex;
   flex-direction: column;
-  width: 158px;
+  width: 90px;
   padding: 0;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -2010,20 +2111,22 @@ onBeforeUnmount(() => {
 .attachment-preview-media {
   position: relative;
   display: block;
+  flex: none;
   width: 100%;
-  aspect-ratio: 16 / 10;
+  height: 56px;
+  min-height: 0;
   background: var(--surface-3);
 }
 
 .attachment-preview-zoom {
   position: absolute;
-  right: 6px;
-  bottom: 6px;
+  right: 4px;
+  bottom: 4px;
   display: grid;
   place-items: center;
-  width: 25px;
-  height: 25px;
-  border-radius: 7px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
   background: rgba(12, 15, 20, 0.64);
   color: #fff;
   opacity: 0;
@@ -2044,8 +2147,8 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 6px;
   min-width: 0;
-  padding: 6px 8px;
-  font-size: 10.5px;
+  padding: 5px 6px;
+  font-size: 9.5px;
 }
 
 .attachment-preview-name .truncate {
@@ -2053,9 +2156,7 @@ onBeforeUnmount(() => {
 }
 
 .attachment-preview-size {
-  flex: none;
-  color: var(--faint);
-  font-size: 9.5px;
+  display: none;
 }
 
 .description-attachments {
@@ -2358,6 +2459,14 @@ onBeforeUnmount(() => {
 
 .journal-note :deep(.rich-text) {
   font-size: 12.5px;
+}
+
+.journal-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 8px;
 }
 
 .composer-card .card-head {

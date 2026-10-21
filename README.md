@@ -19,11 +19,11 @@ toutes les requêtes passent par le petit proxy same-origin intégré à l'appli
   éditables avec un éditeur enrichi (gras, italique, titres, listes, citations, code, liens et
   bascule vers la source Textile), propriétés (statut, priorité, assigné, tracker, version, dates,
   estimation, avancement), suivi (watchers), relations et sous-tickets, pièces jointes avec
-  aperçu des images et visionneuse plein écran.
+  aperçu des images (SVG compris) et visionneuse plein écran.
 - **Discussion** : commentaires triables et repliables (les plus récents d'abord, les 3 derniers
   ouverts par défaut), historique des modifications compact, rédaction et édition des notes avec
-  un éditeur enrichi, notes privées, pièces jointes, collage d'une image du presse-papiers
-  (`Ctrl+V` / `⌘+V`) et brouillons conservés localement.
+  un éditeur enrichi, notes privées, pièces jointes visibles sous chaque commentaire, collage
+  d'une image du presse-papiers (`Ctrl+V` / `⌘+V`) et brouillons conservés localement.
 - **Composeur latéral** : l'ajout d'un commentaire se fait dans la colonne de droite, sans
   masquer les commentaires précédents.
 - **Temps** : saisie rapide, édition/suppression, feuille de temps hebdomadaire, répartition
