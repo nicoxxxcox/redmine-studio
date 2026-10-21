@@ -1,12 +1,14 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   CheckCircle2,
   Database,
   Eye,
   EyeOff,
+  FolderKanban,
   KeyRound,
+  ListFilter,
   Loader2,
   LogOut,
   Monitor,
@@ -16,9 +18,11 @@ import {
   Server,
   ShieldCheck,
   SlidersHorizontal,
+  Star,
   Sun,
   Trash2,
   TriangleAlert,
+  Users,
   Wifi,
 } from 'lucide-vue-next'
 import { useSettingsStore } from '../stores/settings.js'
@@ -28,6 +32,8 @@ import { useTheme } from '../lib/theme.js'
 import { ApiError, RedmineApi } from '../lib/api.js'
 import { fullName } from '../lib/format.js'
 import UserAvatar from '../components/UserAvatar.vue'
+import StatusBadge from '../components/StatusBadge.vue'
+import FavoritePicker from '../components/FavoritePicker.vue'
 
 const router = useRouter()
 const settings = useSettingsStore()
@@ -75,6 +81,98 @@ const defaultStatus = computed({
   set: (value) => {
     settings.settings.defaultStatusId = value ? Number(value) : null
   },
+})
+
+const favoriteTab = ref('status')
+const favoriteStatuses = computed({
+  get: () => settings.favoriteStatusIds,
+  set: (ids) => settings.setFavoriteStatuses(ids),
+})
+const favoriteUsers = computed({
+  get: () => settings.favoriteUserIds,
+  set: (ids) => settings.setFavoriteUsers(ids),
+})
+const favoriteProjects = computed({
+  get: () => settings.favoriteProjectIds,
+  set: (ids) => settings.setFavoriteProjects(ids),
+})
+
+const favoriteTabs = computed(() => [
+  {
+    value: 'status',
+    label: 'Statuts',
+    icon: ListFilter,
+    count: settings.favoriteStatusIds.length,
+  },
+  {
+    value: 'user',
+    label: 'Utilisateurs',
+    icon: Users,
+    count: settings.favoriteUserIds.length,
+  },
+  {
+    value: 'project',
+    label: 'Projets',
+    icon: FolderKanban,
+    count: settings.favoriteProjectIds.length,
+  },
+])
+
+const favoriteCount = computed(
+  () =>
+    settings.favoriteStatusIds.length +
+    settings.favoriteUserIds.length +
+    settings.favoriteProjectIds.length,
+)
+
+const favoriteStatusOptions = computed(() =>
+  session.statuses.map((status) => ({
+    id: status.id,
+    label: status.name,
+    status,
+  })),
+)
+
+const favoriteUserOptions = computed(() =>
+  session.userDirectory.map((user) => ({
+    id: user.id,
+    label: fullName(user) || user.name || `Utilisateur #${user.id}`,
+    meta: user.login ? `@${user.login}` : '',
+    user,
+  })),
+)
+
+const favoriteProjectOptions = computed(() =>
+  session.projects.map((project) => ({
+    id: project.id,
+    label: project.name,
+    meta: project.identifier ? `#${project.identifier}` : '',
+    project,
+  })),
+)
+
+const userDirectoryLoadingLabel = computed(() => {
+  const progress = session.userDirectoryProgress
+  if (progress.total) {
+    return `Chargement des utilisateurs… ${progress.done}/${progress.total} projets`
+  }
+  return 'Chargement des utilisateurs…'
+})
+
+const userDirectoryEmptyLabel = computed(
+  () => session.userDirectoryError || 'Aucun utilisateur accessible.',
+)
+
+watch(
+  () => settings.favoriteUserIds,
+  (ids) => {
+    if (ids.length) session.ensureUsers(ids)
+  },
+  { immediate: true },
+)
+
+onMounted(() => {
+  if (!session.userDirectoryLoaded) session.loadUserDirectory()
 })
 
 function resetTest() {
@@ -133,14 +231,21 @@ async function saveConnection() {
   saving.value = true
   error.value = ''
   try {
+    const previousBaseUrl = settings.settings.baseUrl
     settings.setConnection({
       baseUrl: form.baseUrl,
       apiKey: form.apiKey,
       rememberKey: form.rememberKey,
     })
+    if (previousBaseUrl && previousBaseUrl !== settings.settings.baseUrl) {
+      settings.setFavoriteStatuses([])
+      settings.setFavoriteUsers([])
+      settings.setFavoriteProjects([])
+    }
     form.baseUrl = settings.settings.baseUrl
     session.reset()
     await session.load({ force: true })
+    session.loadUserDirectory()
     toast.success('Connexion et données Redmine mises à jour.')
   } catch (err) {
     error.value =
@@ -370,6 +475,88 @@ function disconnect() {
               </select>
               <span class="field-hint">Pour les nouveaux tickets.</span>
             </div>
+          </div>
+        </section>
+
+        <section class="card favorites-card">
+          <header class="card-head">
+            <div>
+              <h2 class="card-title"><Star :size="15" /> Favoris</h2>
+              <p class="card-sub">
+                Ces favoris limitent les choix proposés dans les filtres des tickets et du temps.
+              </p>
+            </div>
+            <span class="favorites-total">
+              {{ favoriteCount }} favori{{ favoriteCount > 1 ? 's' : '' }}
+            </span>
+          </header>
+          <div class="card-body favorites-body">
+            <p class="favorites-note">
+              Laissez une catégorie vide pour continuer à voir tous ses éléments dans les filtres.
+            </p>
+
+            <div class="favorite-tabs" role="tablist" aria-label="Catégories de favoris">
+              <button
+                v-for="tab in favoriteTabs"
+                :key="tab.value"
+                type="button"
+                class="favorite-tab"
+                :class="{ 'is-active': favoriteTab === tab.value }"
+                role="tab"
+                :aria-selected="favoriteTab === tab.value"
+                @click="favoriteTab = tab.value"
+              >
+                <component :is="tab.icon" :size="13" />
+                {{ tab.label }}
+                <span v-if="tab.count" class="favorite-tab-count">{{ tab.count }}</span>
+              </button>
+            </div>
+
+            <FavoritePicker
+              v-if="favoriteTab === 'status'"
+              v-model="favoriteStatuses"
+              :options="favoriteStatusOptions"
+              :searchable="session.statuses.length > 8"
+              search-placeholder="Rechercher un statut…"
+              empty-label="Aucun statut accessible."
+            >
+              <template #option="{ option }">
+                <StatusBadge :status="option.status" />
+              </template>
+              <template #chip="{ option }">
+                <StatusBadge :status="option.status" />
+              </template>
+            </FavoritePicker>
+
+            <FavoritePicker
+              v-else-if="favoriteTab === 'user'"
+              v-model="favoriteUsers"
+              :options="favoriteUserOptions"
+              :loading="session.userDirectoryLoading"
+              :loading-label="userDirectoryLoadingLabel"
+              search-placeholder="Rechercher un utilisateur…"
+              :empty-label="userDirectoryEmptyLabel"
+            >
+              <template #option="{ option }">
+                <UserAvatar :user="option.user" :name="option.label" :size="23" />
+                <span class="favorite-user-text">
+                  <span class="favorite-user-name">{{ option.label }}</span>
+                  <span v-if="option.meta" class="favorite-user-login">{{ option.meta }}</span>
+                </span>
+              </template>
+              <template #chip="{ option }">
+                <UserAvatar :user="option.user" :name="option.label" :size="16" />
+                <span>{{ option.label }}</span>
+              </template>
+            </FavoritePicker>
+
+            <FavoritePicker
+              v-else
+              v-model="favoriteProjects"
+              :options="favoriteProjectOptions"
+              search-placeholder="Rechercher un projet…"
+              empty-label="Aucun projet accessible."
+            />
           </div>
         </section>
       </div>
@@ -612,6 +799,103 @@ function disconnect() {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
+}
+
+.favorites-total {
+  display: inline-flex;
+  align-items: center;
+  height: 23px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.favorites-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.favorites-note {
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.favorite-tabs {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.favorite-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 550;
+}
+
+.favorite-tab:hover {
+  color: var(--ink);
+}
+
+.favorite-tab.is-active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-xs);
+}
+
+.favorite-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.favorite-user-text {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  flex: 1;
+}
+
+.favorite-user-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.favorite-user-login {
+  margin-left: auto;
+  flex: none;
+  color: var(--faint);
+  font-size: 9.5px;
 }
 
 .account-card {

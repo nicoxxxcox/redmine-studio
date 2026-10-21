@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   Columns3,
   Inbox,
@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Search,
   SlidersHorizontal,
+  Star,
   X,
 } from 'lucide-vue-next'
 import { useSettingsStore } from '../stores/settings.js'
@@ -20,6 +21,7 @@ import { useUiStore } from '../stores/ui.js'
 import { useRefreshStore } from '../stores/refresh.js'
 import { formatDate, isOverdue, issueSprint, relativeTime, toIsoDate } from '../lib/format.js'
 import { statusHue } from '../lib/constants.js'
+import { filterByFavorites, withSelectedOption } from '../lib/favorites.js'
 import IssueId from '../components/IssueId.vue'
 import IssueRow from '../components/IssueRow.vue'
 import StatusBadge from '../components/StatusBadge.vue'
@@ -84,6 +86,20 @@ const dragging = ref(null)
 const dragOver = ref(null)
 const statusSaving = ref(new Set())
 
+const favoriteUsers = computed(() =>
+  filterByFavorites(session.userDirectory, settings.favoriteUserIds),
+)
+const assigneeOptions = computed(() => {
+  const source = settings.favoriteUserIds.length ? favoriteUsers.value : members.value
+  const selectedId = Number(filters.assigned_to_id)
+  if (!Number.isFinite(selectedId) || selectedId <= 0) return source
+  if (source.some((user) => user.id === selectedId)) return source
+  const selected =
+    members.value.find((user) => user.id === selectedId) ||
+    session.userDirectory.find((user) => user.id === selectedId)
+  return [selected || { id: selectedId, name: `Utilisateur #${selectedId}` }, ...source]
+})
+
 let requestSequence = 0
 let filterTimer = null
 let urlTimer = null
@@ -92,6 +108,20 @@ let applyingRoute = false
 
 const selectedProject = computed(() =>
   session.projects.find((project) => project.id === Number(filters.project_id)),
+)
+
+const favoriteProjects = computed(() =>
+  filterByFavorites(session.projects, settings.favoriteProjectIds),
+)
+const projectOptions = computed(() =>
+  withSelectedOption(favoriteProjects.value, session.projects, filters.project_id),
+)
+
+const favoriteStatuses = computed(() =>
+  filterByFavorites(session.statuses, settings.favoriteStatusIds),
+)
+const statusOptions = computed(() =>
+  withSelectedOption(favoriteStatuses.value, session.statuses, filters.status_id),
 )
 
 const searchedIssueId = computed(() => {
@@ -118,12 +148,16 @@ const hiddenBoardStatuses = ref(new Set())
 
 const boardStatusOptions = computed(() => {
   const present = new Set(issues.value.map((issue) => issue.status?.id).filter(Boolean))
-  const columns = session.statuses.filter((status) => !status.is_closed || present.has(status.id))
-  const known = new Set(columns.map((status) => status.id))
-  for (const issue of issues.value) {
-    if (issue.status && !known.has(issue.status.id)) {
-      columns.push(issue.status)
-      known.add(issue.status.id)
+  const columns = statusOptions.value.filter(
+    (status) => !status.is_closed || present.has(status.id),
+  )
+  if (!settings.favoriteStatusIds.length) {
+    const known = new Set(columns.map((status) => status.id))
+    for (const issue of issues.value) {
+      if (issue.status && !known.has(issue.status.id)) {
+        columns.push(issue.status)
+        known.add(issue.status.id)
+      }
     }
   }
   return columns
@@ -360,6 +394,14 @@ watch(
   },
 )
 
+watch(
+  () => settings.favoriteUserIds,
+  (ids) => {
+    if (ids.length) session.ensureUsers(ids)
+  },
+  { immediate: true },
+)
+
 function resetFilters() {
   filters.project_id = ''
   filters.status_id = 'open'
@@ -516,18 +558,36 @@ watch(() => refresh.issueVersion, () => load())
           </button>
         </div>
 
-        <select v-model="filters.project_id" class="select filter-select" aria-label="Projet">
+        <select
+          v-model="filters.project_id"
+          class="select filter-select"
+          aria-label="Projet"
+          :title="
+            settings.favoriteProjectIds.length
+              ? 'Projets limités à vos favoris'
+              : 'Filtrer par projet'
+          "
+        >
           <option value="">Tous les projets</option>
-          <option v-for="project in session.projects" :key="project.id" :value="String(project.id)">
+          <option v-for="project in projectOptions" :key="project.id" :value="String(project.id)">
             {{ project.name }}
           </option>
         </select>
 
-        <select v-model="filters.status_id" class="select filter-select filter-status" aria-label="Statut">
+        <select
+          v-model="filters.status_id"
+          class="select filter-select filter-status"
+          aria-label="Statut"
+          :title="
+            settings.favoriteStatusIds.length
+              ? 'Statuts limités à vos favoris'
+              : 'Filtrer par statut'
+          "
+        >
           <option value="open">Statuts ouverts</option>
           <option value="closed">Statuts fermés</option>
           <option value="*">Tous les statuts</option>
-          <option v-for="status in session.statuses" :key="status.id" :value="String(status.id)">
+          <option v-for="status in statusOptions" :key="status.id" :value="String(status.id)">
             {{ status.name }}
           </option>
         </select>
@@ -536,12 +596,17 @@ watch(() => refresh.issueVersion, () => load())
           v-model="filters.assigned_to_id"
           class="select filter-select filter-assignee"
           aria-label="Assigné à"
-          :disabled="loadingMembers"
+          :disabled="loadingMembers && !settings.favoriteUserIds.length"
+          :title="
+            settings.favoriteUserIds.length
+              ? 'Utilisateurs limités à vos favoris'
+              : 'Filtrer par assigné'
+          "
         >
           <option value="">Toute l'équipe</option>
           <option value="me">Moi</option>
           <option value="!*">Non assigné</option>
-          <option v-for="member in members" :key="member.id" :value="String(member.id)">
+          <option v-for="member in assigneeOptions" :key="member.id" :value="String(member.id)">
             {{ [member.firstname, member.lastname].filter(Boolean).join(' ') || member.name }}
           </option>
         </select>
@@ -599,6 +664,14 @@ watch(() => refresh.issueVersion, () => load())
         >
           Tous les statuts
         </button>
+        <RouterLink
+          v-if="settings.hasFavorites"
+          class="quick-chip favorites-shortcut"
+          :to="{ name: 'settings' }"
+          title="Les menus de filtres sont limités à vos favoris. Cliquez pour les modifier."
+        >
+          <Star :size="11" /> Favoris
+        </RouterLink>
         <button
           v-if="activeFilterCount"
           type="button"
@@ -1015,6 +1088,14 @@ watch(() => refresh.issueVersion, () => load())
 .quick-chip.is-active {
   background: var(--accent-soft);
   border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent);
+}
+
+.favorites-shortcut {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--line));
   color: var(--accent);
 }
 

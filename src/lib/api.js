@@ -178,6 +178,20 @@ export class RedmineApi {
     return this.request(`/users/${id}.json`)
   }
 
+  /**
+   * Redmine réserve souvent `/users.json` aux administrateurs. La liste est
+   * donc tentée ici, puis complétée par les membres des projets si nécessaire.
+   */
+  users({ limit = 100, offset = 0, name } = {}) {
+    return this.request('/users.json', {
+      query: {
+        limit,
+        offset,
+        ...(name ? { name } : {}),
+      },
+    })
+  }
+
   statuses() {
     return this.request('/issue_statuses.json')
   }

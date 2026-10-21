@@ -33,6 +33,9 @@ toutes les requêtes passent par le petit proxy same-origin intégré à l'appli
 - **Temps** : saisie rapide, édition/suppression, feuille de temps hebdomadaire, répartition
   par activité et résumé.
 - **Projets** : accès rapide aux tickets de chaque projet.
+- **Favoris** : sélection des statuts, utilisateurs et projets favoris dans les paramètres ; ces
+  favoris limitent les choix des filtres de tickets et de temps (une catégorie vide conserve tous
+  ses éléments).
 - **Confort** : thème clair/sombre/système, palette de commandes (`⌘/Ctrl + K`), raccourcis
   clavier, interface responsive, largeur des colonnes des tableaux ajustable (glisser les
   séparateurs d'en-tête, double-clic pour réinitialiser, mémorisée localement), notifications.

@@ -1,6 +1,7 @@
 import { computed, reactive, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { RedmineApi } from '../lib/api.js'
+import { normalizeFavoriteIds } from '../lib/favorites.js'
 
 const STORAGE_KEY = 'redmine-studio.settings.v1'
 
@@ -13,12 +14,19 @@ const DEFAULTS = {
   defaultStatusId: null,
   compactList: false,
   rememberKey: true,
+  favoriteStatusIds: [],
+  favoriteUserIds: [],
+  favoriteProjectIds: [],
 }
 
 function loadSettings() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
-    return { ...DEFAULTS, ...stored }
+    const merged = { ...DEFAULTS, ...stored }
+    merged.favoriteStatusIds = normalizeFavoriteIds(merged.favoriteStatusIds)
+    merged.favoriteUserIds = normalizeFavoriteIds(merged.favoriteUserIds)
+    merged.favoriteProjectIds = normalizeFavoriteIds(merged.favoriteProjectIds)
+    return merged
   } catch {
     return { ...DEFAULTS }
   }
@@ -38,6 +46,15 @@ export const useSettingsStore = defineStore('settings', () => {
   const configured = computed(() => Boolean(settings.baseUrl && settings.apiKey))
   const api = computed(
     () => new RedmineApi({ baseUrl: settings.baseUrl, apiKey: settings.apiKey }),
+  )
+  const favoriteStatusIds = computed(() => normalizeFavoriteIds(settings.favoriteStatusIds))
+  const favoriteUserIds = computed(() => normalizeFavoriteIds(settings.favoriteUserIds))
+  const favoriteProjectIds = computed(() => normalizeFavoriteIds(settings.favoriteProjectIds))
+  const hasFavorites = computed(
+    () =>
+      favoriteStatusIds.value.length > 0 ||
+      favoriteUserIds.value.length > 0 ||
+      favoriteProjectIds.value.length > 0,
   )
 
   watch(
@@ -69,7 +86,22 @@ export const useSettingsStore = defineStore('settings', () => {
     settings.defaultProjectId = null
     settings.defaultActivityId = null
     settings.defaultStatusId = null
+    settings.favoriteStatusIds = []
+    settings.favoriteUserIds = []
+    settings.favoriteProjectIds = []
     sessionStorage.removeItem('redmine-studio.apiKey')
+  }
+
+  function setFavoriteStatuses(ids) {
+    settings.favoriteStatusIds = normalizeFavoriteIds(ids)
+  }
+
+  function setFavoriteUsers(ids) {
+    settings.favoriteUserIds = normalizeFavoriteIds(ids)
+  }
+
+  function setFavoriteProjects(ids) {
+    settings.favoriteProjectIds = normalizeFavoriteIds(ids)
   }
 
   function setTheme(theme) {
@@ -86,8 +118,15 @@ export const useSettingsStore = defineStore('settings', () => {
     settings,
     configured,
     api,
+    favoriteStatusIds,
+    favoriteUserIds,
+    favoriteProjectIds,
+    hasFavorites,
     setConnection,
     disconnect,
+    setFavoriteStatuses,
+    setFavoriteUsers,
+    setFavoriteProjects,
     setTheme,
     toggleCompactList,
     normalizeBaseUrl,

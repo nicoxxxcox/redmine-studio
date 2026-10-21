@@ -19,6 +19,11 @@ export const useSessionStore = defineStore('session', () => {
   const error = ref(null)
   const loadedAt = ref(0)
   const projectActivity = ref(new Map())
+  const userDirectory = ref([])
+  const userDirectoryLoading = ref(false)
+  const userDirectoryLoaded = ref(false)
+  const userDirectoryError = ref('')
+  const userDirectoryProgress = ref({ done: 0, total: 0 })
 
   const defaultStatus = computed(
     () => statuses.value.find((status) => status.is_default) || statuses.value[0] || null,
@@ -208,6 +213,120 @@ export const useSessionStore = defineStore('session', () => {
     return projectActivity.value.get(String(projectId))?.get(Number(userId)) || 0
   }
 
+  function userSortName(entry) {
+    return (
+      [entry.firstname, entry.lastname].filter(Boolean).join(' ') ||
+      entry.name ||
+      entry.login ||
+      ''
+    )
+  }
+
+  function mergeDirectoryUsers(users = []) {
+    const merged = new Map(userDirectory.value.map((entry) => [entry.id, entry]))
+    for (const userToMerge of users) {
+      if (!userToMerge?.id || userToMerge.isGroup) continue
+      merged.set(userToMerge.id, { ...merged.get(userToMerge.id), ...userToMerge })
+    }
+    userDirectory.value = [...merged.values()].sort((a, b) =>
+      userSortName(a).localeCompare(userSortName(b), 'fr', { sensitivity: 'base' }),
+    )
+  }
+
+  /**
+   * Complète quelques utilisateurs à la demande (favoris, filtres ciblés) sans
+   * charger tout l'annuaire.
+   */
+  async function ensureUsers(ids = []) {
+    const known = new Set(userDirectory.value.map((entry) => entry.id))
+    const missing = [...new Set(ids.map(Number))].filter(
+      (id) => Number.isFinite(id) && id > 0 && !known.has(id),
+    )
+    if (!missing.length) return
+    const results = await Promise.allSettled(missing.map((id) => settings.api.user(id)))
+    const users = results
+      .filter((result) => result.status === 'fulfilled')
+      .map((result) => result.value?.user)
+      .filter(Boolean)
+    mergeDirectoryUsers(users)
+
+    const resolved = new Set(userDirectory.value.map((entry) => entry.id))
+    const unresolved = missing.filter((id) => !resolved.has(id))
+    if (unresolved.length) {
+      mergeDirectoryUsers(
+        unresolved.map((id) => ({ id, name: `Utilisateur #${id}` })),
+      )
+    }
+  }
+
+  /**
+   * Annuaire global utilisé par les paramètres. Redmine 3.4 refuse souvent
+   * `/users.json` aux non-administrateurs : on agrège alors les membres des
+   * projets accessibles, par petits lots pour rester réactif.
+   */
+  async function loadUserDirectory({ force = false } = {}) {
+    if (userDirectoryLoading.value) return userDirectory.value
+    if (!force && userDirectoryLoaded.value) return userDirectory.value
+
+    userDirectoryLoading.value = true
+    userDirectoryError.value = ''
+    userDirectoryProgress.value = { done: 0, total: 0 }
+
+    try {
+      if (!projects.value.length) {
+        try {
+          await load()
+        } catch {
+          // L'annuaire reste utilisable avec les utilisateurs déjà connus.
+        }
+      }
+
+      let loadedFromApi = false
+      try {
+        let offset = 0
+        let total = Number.POSITIVE_INFINITY
+        while (offset < total && offset < 5000) {
+          const data = await settings.api.users({ limit: 100, offset })
+          const page = (data?.users || []).filter((entry) => entry?.id && !entry.isGroup)
+          mergeDirectoryUsers(page)
+          total = Number(data?.total_count ?? offset + page.length)
+          offset += page.length
+          if (!page.length || page.length < 100 || offset >= total) break
+        }
+        loadedFromApi = true
+      } catch {
+        // API réservée aux administrateurs : repli sur les membres des projets.
+      }
+
+      if (!loadedFromApi) {
+        const projectList = projects.value
+        const chunkSize = 5
+        userDirectoryProgress.value = { done: 0, total: projectList.length }
+        for (let index = 0; index < projectList.length; index += chunkSize) {
+          const chunk = projectList.slice(index, index + chunkSize)
+          const results = await Promise.allSettled(
+            chunk.map((project) => membersFor(project.id)),
+          )
+          for (const result of results) {
+            if (result.status === 'fulfilled') mergeDirectoryUsers(result.value || [])
+          }
+          userDirectoryProgress.value = {
+            done: Math.min(index + chunkSize, projectList.length),
+            total: projectList.length,
+          }
+        }
+      }
+
+      if (user.value) mergeDirectoryUsers([user.value])
+      userDirectoryLoaded.value = true
+      if (!userDirectory.value.length) {
+        userDirectoryError.value = "Aucun utilisateur accessible n'a été trouvé."
+      }
+    } finally {
+      userDirectoryLoading.value = false
+    }
+  }
+
   function reset() {
     user.value = null
     statuses.value = []
@@ -219,6 +338,11 @@ export const useSessionStore = defineStore('session', () => {
     error.value = null
     loadedAt.value = 0
     projectActivity.value = new Map()
+    userDirectory.value = []
+    userDirectoryLoading.value = false
+    userDirectoryLoaded.value = false
+    userDirectoryError.value = ''
+    userDirectoryProgress.value = { done: 0, total: 0 }
     membershipCache.clear()
     userDetailsCache.clear()
   }
@@ -235,6 +359,11 @@ export const useSessionStore = defineStore('session', () => {
     error,
     loadedAt,
     projectActivity,
+    userDirectory,
+    userDirectoryLoading,
+    userDirectoryLoaded,
+    userDirectoryError,
+    userDirectoryProgress,
     defaultStatus,
     defaultPriority,
     defaultTracker,
@@ -248,6 +377,8 @@ export const useSessionStore = defineStore('session', () => {
     projectById,
     membersFor,
     resolveUserDetails,
+    ensureUsers,
+    loadUserDirectory,
     loadProjectActivity,
     projectActivityScore,
     reset,

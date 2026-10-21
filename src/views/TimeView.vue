@@ -25,6 +25,7 @@ import {
   startOfWeek,
   toIsoDate,
 } from '../lib/format.js'
+import { filterByFavorites, withSelectedOption } from '../lib/favorites.js'
 import EmptyState from '../components/EmptyState.vue'
 import IssueId from '../components/IssueId.vue'
 import ColumnResizer from '../components/ColumnResizer.vue'
@@ -41,6 +42,13 @@ const issueMap = ref({})
 const loading = ref(true)
 const error = ref('')
 const projectFilter = ref('')
+const projectOptions = computed(() =>
+  withSelectedOption(
+    filterByFavorites(session.projects, settings.favoriteProjectIds),
+    session.projects,
+    projectFilter.value,
+  ),
+)
 let loadSequence = 0
 
 const timeHead = ref(null)
@@ -201,9 +209,18 @@ onMounted(load)
         <p class="page-subtitle">Votre feuille de temps, semaine par semaine.</p>
       </div>
       <div class="page-actions">
-        <select v-model="projectFilter" class="select project-filter" aria-label="Filtrer par projet">
+        <select
+          v-model="projectFilter"
+          class="select project-filter"
+          aria-label="Filtrer par projet"
+          :title="
+            settings.favoriteProjectIds.length
+              ? 'Projets limités à vos favoris'
+              : 'Filtrer par projet'
+          "
+        >
           <option value="">Tous les projets</option>
-          <option v-for="project in session.projects" :key="project.id" :value="String(project.id)">
+          <option v-for="project in projectOptions" :key="project.id" :value="String(project.id)">
             {{ project.name }}
           </option>
         </select>
