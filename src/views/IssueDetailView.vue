@@ -18,6 +18,7 @@ import {
   GitBranch,
   Loader2,
   Lock,
+  Maximize2,
   MessageSquare,
   MessageSquarePlus,
   Milestone,
@@ -42,6 +43,7 @@ import {
   formatHours,
   fullName,
   isOverdue,
+  isImageAttachment,
   issueSprint,
   plainText,
   relativeTime,
@@ -57,6 +59,8 @@ import UserAvatar from '../components/UserAvatar.vue'
 import MarkdownBody from '../components/MarkdownBody.vue'
 import RichTextEditor from '../components/RichTextEditor.vue'
 import EmptyState from '../components/EmptyState.vue'
+import AttachmentImage from '../components/AttachmentImage.vue'
+import ImageLightbox from '../components/ImageLightbox.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -99,6 +103,8 @@ const commentError = ref('')
 const draftSaved = ref(false)
 const uploadingFiles = ref(false)
 const commentEditor = ref(null)
+const imageViewerOpen = ref(false)
+const imageViewerIndex = ref(0)
 
 const relationForm = reactive({ relation_type: 'relates', issue_to_id: '', delay: '' })
 const addingRelation = ref(false)
@@ -155,6 +161,10 @@ const notesAllExpanded = computed(
 const noteCount = computed(() => noteJournals.value.length)
 const sprint = computed(() => issueSprint(issue.value))
 const attachments = computed(() => issue.value?.attachments || [])
+const imageAttachments = computed(() => attachments.value.filter(isImageAttachment))
+const fileAttachments = computed(() =>
+  attachments.value.filter((attachment) => !isImageAttachment(attachment)),
+)
 const relations = computed(() => issue.value?.relations || [])
 const children = computed(() => issue.value?.children || [])
 
@@ -418,6 +428,8 @@ watch(issueId, () => {
   commentFiles.value = []
   editingDescription.value = false
   editingSubject.value = false
+  imageViewerOpen.value = false
+  imageViewerIndex.value = 0
   draftRestoredFor = null
   activeTab.value = 'discussion'
   timelineNotesOnly.value = false
@@ -690,6 +702,13 @@ async function downloadAttachment(attachment) {
   } catch (err) {
     toast.error(err?.message || 'Téléchargement impossible.')
   }
+}
+
+function openImageViewer(attachment) {
+  const index = imageAttachments.value.findIndex((item) => item.id === attachment.id)
+  if (index === -1) return
+  imageViewerIndex.value = index
+  imageViewerOpen.value = true
 }
 
 function openTime(entry = null) {
@@ -1022,9 +1041,31 @@ onBeforeUnmount(() => {
               <MarkdownBody v-else :source="issue.description" empty-text="Aucune description pour ce ticket." />
             </div>
 
-            <div v-if="attachments.length" class="description-attachments">
+            <div v-if="imageAttachments.length" class="description-image-grid">
               <button
-                v-for="attachment in attachments"
+                v-for="attachment in imageAttachments"
+                :key="attachment.id"
+                type="button"
+                class="attachment-preview"
+                :title="`Ouvrir l’aperçu de ${attachment.filename}`"
+                @click="openImageViewer(attachment)"
+              >
+                <span class="attachment-preview-media">
+                  <AttachmentImage :attachment="attachment" :alt="attachment.filename" />
+                  <span class="attachment-preview-zoom" aria-hidden="true">
+                    <Maximize2 :size="14" />
+                  </span>
+                </span>
+                <span class="attachment-preview-name">
+                  <span class="truncate">{{ attachment.filename }}</span>
+                  <span class="attachment-preview-size">{{ formatFileSize(attachment.filesize) }}</span>
+                </span>
+              </button>
+            </div>
+
+            <div v-if="fileAttachments.length" class="description-attachments">
+              <button
+                v-for="attachment in fileAttachments"
                 :key="attachment.id"
                 type="button"
                 class="attachment-chip"
@@ -1292,15 +1333,45 @@ onBeforeUnmount(() => {
             </header>
             <div v-if="attachments.length" class="files-list">
               <div v-for="attachment in attachments" :key="attachment.id" class="file-row">
-                <span class="file-icon"><FileText :size="16" /></span>
+                <button
+                  v-if="isImageAttachment(attachment)"
+                  class="file-thumb"
+                  type="button"
+                  :title="`Ouvrir l’aperçu de ${attachment.filename}`"
+                  :aria-label="`Ouvrir l’aperçu de ${attachment.filename}`"
+                  @click="openImageViewer(attachment)"
+                >
+                  <AttachmentImage
+                    :attachment="attachment"
+                    :thumbnail-size="200"
+                    :alt="attachment.filename"
+                  />
+                </button>
+                <span v-else class="file-icon"><FileText :size="16" /></span>
                 <div class="file-info">
-                  <span class="file-name">{{ attachment.filename }}</span>
+                  <button
+                    v-if="isImageAttachment(attachment)"
+                    class="file-name file-name-button"
+                    type="button"
+                    @click="openImageViewer(attachment)"
+                  >
+                    {{ attachment.filename }}
+                  </button>
+                  <span v-else class="file-name">{{ attachment.filename }}</span>
                   <span class="file-meta">
                     {{ formatFileSize(attachment.filesize) }}
                     <template v-if="attachment.author"> · {{ fullName(attachment.author) }}</template>
                     <template v-if="attachment.created_on"> · {{ formatDate(attachment.created_on) }}</template>
                   </span>
                 </div>
+                <button
+                  v-if="isImageAttachment(attachment)"
+                  class="btn btn-sm"
+                  type="button"
+                  @click="openImageViewer(attachment)"
+                >
+                  <Maximize2 :size="13" /> Aperçu
+                </button>
                 <button class="btn btn-sm" type="button" @click="downloadAttachment(attachment)">
                   <Download :size="13" /> Télécharger
                 </button>
@@ -1676,6 +1747,13 @@ onBeforeUnmount(() => {
       </div>
 
     </template>
+
+    <ImageLightbox
+      :open="imageViewerOpen"
+      :attachments="imageAttachments"
+      :start-index="imageViewerIndex"
+      @close="imageViewerOpen = false"
+    />
   </div>
 </template>
 
@@ -1897,6 +1975,87 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 10px;
+}
+
+.description-image-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 18px 14px;
+}
+
+.attachment-preview {
+  display: flex;
+  flex-direction: column;
+  width: 158px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  text-align: left;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition),
+    transform var(--transition);
+}
+
+.attachment-preview:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.attachment-preview-media {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background: var(--surface-3);
+}
+
+.attachment-preview-zoom {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border-radius: 7px;
+  background: rgba(12, 15, 20, 0.64);
+  color: #fff;
+  opacity: 0;
+  transform: translateY(2px);
+  transition:
+    opacity var(--transition),
+    transform var(--transition);
+}
+
+.attachment-preview:hover .attachment-preview-zoom,
+.attachment-preview:focus-visible .attachment-preview-zoom {
+  opacity: 1;
+  transform: none;
+}
+
+.attachment-preview-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 8px;
+  font-size: 10.5px;
+}
+
+.attachment-preview-name .truncate {
+  flex: 1;
+}
+
+.attachment-preview-size {
+  flex: none;
+  color: var(--faint);
+  font-size: 9.5px;
 }
 
 .description-attachments {
@@ -2590,6 +2749,26 @@ select.property-control {
   flex: none;
 }
 
+.file-thumb {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-3);
+  flex: none;
+  cursor: zoom-in;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition);
+}
+
+.file-thumb:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-xs);
+}
+
 .file-info {
   display: flex;
   flex-direction: column;
@@ -2603,6 +2782,23 @@ select.property-control {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.file-name-button {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: zoom-in;
+}
+
+.file-name-button:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .file-meta {

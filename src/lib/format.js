@@ -230,6 +230,13 @@ export function plainText(value = '') {
     .trim()
 }
 
+const IMAGE_EXTENSION = /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i
+
+export function isImageAttachment(attachment) {
+  const type = String(attachment?.content_type || '').toLowerCase()
+  return type.startsWith('image/') || IMAGE_EXTENSION.test(String(attachment?.filename || ''))
+}
+
 export function formatFileSize(bytes) {
   const value = Number(bytes) || 0
   if (value < 1024) return `${value} o`

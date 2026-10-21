@@ -373,10 +373,10 @@ export class RedmineApi {
     return data.upload
   }
 
-  async downloadAttachment(attachment) {
+  attachmentPath(url) {
     let pathname
     try {
-      const absolute = new URL(attachment.content_url, `${this.baseUrl}/`)
+      const absolute = new URL(url, `${this.baseUrl}/`)
       pathname = absolute.pathname + absolute.search
       // Redmine inclut le sous-dossier d'installation dans content_url ; le
       // proxy l'ajoute déjà à partir de X-Redmine-Base.
@@ -385,13 +385,33 @@ export class RedmineApi {
         pathname = pathname.slice(basePath.length)
       }
     } catch {
-      pathname = attachment.content_url
+      pathname = url
     }
-    const response = await fetch(PREFIX + pathname, { headers: this.headers() })
+    return pathname
+  }
+
+  async fetchAttachment(attachment, { thumbnail = false, thumbnailSize = 400 } = {}) {
+    let url = thumbnail
+      ? attachment?.thumbnail_url || attachment?.content_url
+      : attachment?.content_url
+    if (!url) throw new ApiError('Fichier introuvable.')
+    if (thumbnail && thumbnailSize && !/[?&]size=/.test(url)) {
+      url += `${url.includes('?') ? '&' : '?'}size=${thumbnailSize}`
+    }
+    const response = await fetch(PREFIX + this.attachmentPath(url), {
+      headers: this.headers(),
+    })
     if (!response.ok) {
-      throw new ApiError('Téléchargement impossible.', { status: response.status })
+      throw new ApiError(
+        thumbnail ? "Aperçu de l'image indisponible." : 'Téléchargement impossible.',
+        { status: response.status },
+      )
     }
     return response.blob()
+  }
+
+  downloadAttachment(attachment) {
+    return this.fetchAttachment(attachment)
   }
 }
 

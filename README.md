@@ -18,7 +18,8 @@ toutes les requêtes passent par le petit proxy same-origin intégré à l'appli
 - **Détail d'un ticket** : changement de statut rapide dans l'en-tête, sujet et description
   éditables avec un éditeur enrichi (gras, italique, titres, listes, citations, code, liens et
   bascule vers la source Textile), propriétés (statut, priorité, assigné, tracker, version, dates,
-  estimation, avancement), suivi (watchers), relations et sous-tickets, pièces jointes.
+  estimation, avancement), suivi (watchers), relations et sous-tickets, pièces jointes avec
+  aperçu des images et visionneuse plein écran.
 - **Discussion** : commentaires triables et repliables (les plus récents d'abord, les 3 derniers
   ouverts par défaut), historique des modifications compact, rédaction et édition des notes avec
   un éditeur enrichi, notes privées, pièces jointes, collage d'une image du presse-papiers
