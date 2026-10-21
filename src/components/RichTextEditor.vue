@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import {
+  AtSign,
   Bold,
   Code,
   Eraser,
@@ -15,8 +16,9 @@ import {
   SquareCode,
   Undo2,
 } from 'lucide-vue-next'
-import { renderRichText } from '../lib/format.js'
+import { fullName, renderRichText } from '../lib/format.js'
 import { domToTextile } from '../lib/textile.js'
+import UserAvatar from './UserAvatar.vue'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -26,15 +28,28 @@ const props = defineProps({
   minHeight: { type: String, default: '150px' },
   disabled: { type: Boolean, default: false },
   compact: { type: Boolean, default: false },
+  users: { type: Array, default: () => [] },
+  resolveUser: { type: Function, default: null },
 })
 
 const emit = defineEmits(['update:modelValue'])
 
 const editor = ref(null)
 const source = ref(null)
+const mentionMenu = ref(null)
 const isSource = ref(false)
 const isEmpty = ref(!props.modelValue)
 const applying = ref(false)
+
+const mention = reactive({
+  open: false,
+  query: '',
+  activeIndex: 0,
+  top: 0,
+  left: 0,
+  width: 320,
+})
+let mentionRange = null
 
 const active = reactive({
   bold: false,
@@ -46,6 +61,40 @@ const active = reactive({
   pre: false,
   code: false,
 })
+
+function normalizeMentionSearch(value = '') {
+  return String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+const mentionResults = computed(() => {
+  const users = (props.users || []).filter((user) => user?.id && !user.isGroup)
+  const query = normalizeMentionSearch(mention.query)
+  if (!query) return users.slice(0, 10)
+  const terms = query.split(/\s+/).filter(Boolean)
+  return users
+    .filter((user) => {
+      const haystack = normalizeMentionSearch(
+        [fullName(user), user.login, user.mail, user.name].filter(Boolean).join(' '),
+      )
+      return terms.every((term) => haystack.includes(term))
+    })
+    .slice(0, 10)
+})
+
+const activeMention = computed(() => mentionResults.value[mention.activeIndex] || null)
+
+function mentionMeta(user) {
+  if (user?.login) return `@${user.login}`
+  return user?.mail || ''
+}
+
+function mentionHandle(user) {
+  return String(user?.login || user?.name || fullName(user)).trim()
+}
 
 function escapeHtml(value) {
   return String(value)
@@ -78,6 +127,7 @@ watch(
     if (isSource.value || applying.value || !editor.value) return
     const current = domToTextile(editor.value)
     if (current === String(value || '').trim()) return
+    closeMention()
     editor.value.innerHTML = renderRichText(value)
     isEmpty.value = !String(value || '').trim()
   },
@@ -91,6 +141,10 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('selectionchange', refreshActive)
+  document.removeEventListener('pointerdown', onDocumentPointerDown, true)
+  window.removeEventListener('scroll', onWindowScroll, true)
+  window.removeEventListener('resize', closeMention)
+  delete document.body.dataset.mentionOpen
 })
 
 function refreshActive() {
@@ -211,6 +265,175 @@ function history(direction) {
   refreshActive()
 }
 
+function closeMention() {
+  mention.open = false
+  mention.query = ''
+  mention.activeIndex = 0
+  mentionRange = null
+}
+
+function positionMentionMenu() {
+  const rect = mentionRange?.getBoundingClientRect()
+  if (!rect) return
+  const width = Math.min(320, window.innerWidth - 16)
+  const estimatedHeight = Math.min(300, 42 + Math.max(1, mentionResults.value.length) * 38)
+  let left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8))
+  let top = rect.bottom + 6
+  if (top + estimatedHeight > window.innerHeight - 8) {
+    top = Math.max(8, rect.top - estimatedHeight - 6)
+  }
+  mention.width = Math.round(width)
+  mention.left = Math.round(left)
+  mention.top = Math.round(top)
+}
+
+function detectMentionContext() {
+  if (props.disabled || isSource.value || !editor.value) {
+    closeMention()
+    return
+  }
+  const selection = window.getSelection()
+  if (!selection || !selection.rangeCount || !selection.isCollapsed) {
+    closeMention()
+    return
+  }
+  const range = selection.getRangeAt(0)
+  const node = range.startContainer
+  if (node?.nodeType !== Node.TEXT_NODE || !editor.value.contains(node)) {
+    closeMention()
+    return
+  }
+  if (node.parentElement?.closest('code, pre')) {
+    closeMention()
+    return
+  }
+  const before = node.textContent.slice(0, range.startOffset)
+  const match = /(?:^|[\s([{«"'’])@([\p{L}\p{N} ._'-]{0,40})$/u.exec(before)
+  if (!match) {
+    closeMention()
+    return
+  }
+
+  const query = match[1]
+  const atOffset = before.length - query.length - 1
+  const nextRange = document.createRange()
+  nextRange.setStart(node, atOffset)
+  nextRange.setEnd(node, range.startOffset)
+  mentionRange = nextRange
+
+  const changed = !mention.open || mention.query !== query
+  mention.open = true
+  mention.query = query
+  if (changed) mention.activeIndex = 0
+  if (mention.activeIndex >= mentionResults.value.length) mention.activeIndex = 0
+  positionMentionMenu()
+}
+
+function scrollMentionOption() {
+  nextTick(() => {
+    mentionMenu.value?.querySelector('.mention-option.is-active')?.scrollIntoView({
+      block: 'nearest',
+    })
+  })
+}
+
+function moveMention(delta) {
+  const count = mentionResults.value.length
+  if (!count) return
+  mention.activeIndex = (mention.activeIndex + delta + count) % count
+  scrollMentionOption()
+}
+
+async function selectMention(user) {
+  if (!user || !mentionRange) return
+  const range = mentionRange.cloneRange()
+  closeMention()
+
+  let resolved = user
+  if (!resolved.login && props.resolveUser) {
+    try {
+      resolved = await props.resolveUser(resolved)
+    } catch {
+      // Le nom reste utilisable si le login ne peut pas être récupéré.
+    }
+  }
+
+  if (!range.startContainer?.isConnected || !editor.value?.contains(range.startContainer)) return
+  const handle = mentionHandle(resolved)
+  if (!handle) return
+
+  range.deleteContents()
+  const token = document.createTextNode(`@${handle} `)
+  range.insertNode(token)
+  const caret = document.createRange()
+  caret.setStart(token, token.length)
+  caret.collapse(true)
+  const selection = window.getSelection()
+  selection?.removeAllRanges()
+  selection?.addRange(caret)
+  focusEditor()
+  sync()
+  refreshActive()
+}
+
+function onEditorKeydown(event) {
+  if (!mention.open) return
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    moveMention(1)
+    return
+  }
+  if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    moveMention(-1)
+    return
+  }
+  if (event.key === 'Enter' || event.key === 'Tab') {
+    if (activeMention.value) {
+      event.preventDefault()
+      selectMention(activeMention.value)
+    }
+    return
+  }
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    event.stopPropagation()
+    closeMention()
+  }
+}
+
+function onDocumentPointerDown(event) {
+  if (mentionMenu.value?.contains(event.target)) return
+  closeMention()
+}
+
+function onWindowScroll(event) {
+  if (mentionMenu.value?.contains(event.target)) return
+  closeMention()
+}
+
+function onEditorInput() {
+  sync()
+  detectMentionContext()
+}
+
+watch(
+  () => mention.open,
+  (open) => {
+    if (open) {
+      document.addEventListener('pointerdown', onDocumentPointerDown, true)
+      window.addEventListener('scroll', onWindowScroll, true)
+      window.addEventListener('resize', closeMention)
+      document.body.dataset.mentionOpen = '1'
+    } else {
+      document.removeEventListener('pointerdown', onDocumentPointerDown, true)
+      window.removeEventListener('scroll', onWindowScroll, true)
+      window.removeEventListener('resize', closeMention)
+      delete document.body.dataset.mentionOpen
+    }
+  },
+)
+
 const tools = [
   { key: 'bold', state: 'bold', icon: Bold, label: 'Gras (Ctrl+B)', run: () => run('bold') },
   { key: 'italic', state: 'italic', icon: Italic, label: 'Italique (Ctrl+I)', run: () => run('italic') },
@@ -233,6 +456,7 @@ const visibleTools = computed(() => (props.compact ? tools.filter((tool) => !too
 
 async function toggleSource() {
   if (props.disabled) return
+  closeMention()
   isSource.value = !isSource.value
   await nextTick()
   if (isSource.value) {
@@ -256,6 +480,7 @@ function onSourceInput(event) {
 
 function onPaste(event) {
   if (props.disabled) return
+  closeMention()
   const data = event.clipboardData
   if (!data) return
 
@@ -326,14 +551,22 @@ defineExpose({ focus })
       :contenteditable="disabled ? 'false' : 'true'"
       role="textbox"
       aria-multiline="true"
+      aria-autocomplete="list"
       :aria-label="ariaLabel"
+      :aria-expanded="mention.open"
+      :aria-controls="mention.open ? 'rich-mention-menu' : undefined"
+      :aria-activedescendant="
+        mention.open && activeMention ? `mention-option-${activeMention.id}` : undefined
+      "
       :data-placeholder="placeholder"
       spellcheck="true"
-      @input="sync"
+      @input="onEditorInput"
       @paste="onPaste"
+      @keydown="onEditorKeydown"
       @keyup="refreshActive"
       @mouseup="refreshActive"
       @focus="refreshActive"
+      @blur="closeMention"
     ></div>
 
     <textarea
@@ -346,5 +579,47 @@ defineExpose({ focus })
       spellcheck="false"
       @input="onSourceInput"
     ></textarea>
+
+    <Teleport to="body">
+      <div
+        v-if="mention.open"
+        id="rich-mention-menu"
+        ref="mentionMenu"
+        class="mention-menu"
+        role="listbox"
+        aria-label="Mentionner un utilisateur"
+        :style="{ top: `${mention.top}px`, left: `${mention.left}px`, width: `${mention.width}px` }"
+        @mousedown.prevent
+      >
+        <div class="mention-menu-head">
+          <AtSign :size="12" />
+          <span>Mentionner un utilisateur</span>
+          <span v-if="mention.query" class="mention-query">@{{ mention.query }}</span>
+        </div>
+
+        <button
+          v-for="(user, index) in mentionResults"
+          :id="`mention-option-${user.id}`"
+          :key="user.id"
+          type="button"
+          class="mention-option"
+          :class="{ 'is-active': index === mention.activeIndex }"
+          role="option"
+          :aria-selected="index === mention.activeIndex"
+          @mouseenter="mention.activeIndex = index"
+          @mousedown.prevent="selectMention(user)"
+        >
+          <UserAvatar :user="user" :size="24" />
+          <span class="mention-option-text">
+            <span class="mention-option-name">{{ fullName(user) }}</span>
+            <span v-if="mentionMeta(user)" class="mention-option-meta">{{ mentionMeta(user) }}</span>
+          </span>
+        </button>
+
+        <p v-if="!mentionResults.length" class="mention-empty">
+          Aucun utilisateur trouvé.
+        </p>
+      </div>
+    </Teleport>
   </div>
 </template>

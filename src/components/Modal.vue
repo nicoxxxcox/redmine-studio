@@ -24,6 +24,9 @@ function onBackdrop() {
 
 function onKeydown(event) {
   if (event.key === 'Escape') {
+    // Une combobox de mention ouverte doit pouvoir être fermée sans
+    // refermer la modale qui la contient.
+    if (document.body.dataset.mentionOpen) return
     event.stopPropagation()
     close()
     return

@@ -1543,6 +1543,114 @@ ol {
   padding: 9px 11px;
 }
 
+.mention-menu {
+  position: fixed;
+  z-index: 120;
+  max-height: 286px;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.mention-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px 7px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mention-menu-head svg {
+  color: var(--accent);
+}
+
+.mention-query {
+  margin-left: auto;
+  max-width: 120px;
+  overflow: hidden;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.mention-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 7px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-soft);
+  text-align: left;
+  cursor: pointer;
+}
+
+.mention-option:hover,
+.mention-option.is-active {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.mention-option-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.mention-option-name {
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mention-option.is-active .mention-option-name {
+  color: var(--ink);
+}
+
+.mention-option-meta {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mention-empty {
+  margin: 0;
+  padding: 10px 8px;
+  color: var(--muted);
+  font-size: 11.5px;
+  text-align: center;
+}
+
+.rich-text .mention {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
 .rich-text strong {
   color: var(--ink);
   font-weight: 650;

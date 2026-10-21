@@ -174,6 +174,10 @@ export class RedmineApi {
     return this.request('/users/current.json')
   }
 
+  user(id) {
+    return this.request(`/users/${id}.json`)
+  }
+
   statuses() {
     return this.request('/issue_statuses.json')
   }

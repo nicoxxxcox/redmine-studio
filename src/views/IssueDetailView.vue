@@ -191,6 +191,39 @@ const journalAttachmentsById = computed(() => {
 const relations = computed(() => issue.value?.relations || [])
 const children = computed(() => issue.value?.children || [])
 
+/**
+ * Suggestions de mentions : on classe d'abord les participants du ticket
+ * (l'activité récente est la plus pertinente), puis l'activité récente du
+ * projet issue des saisies de temps. L'utilisateur courant est masqué.
+ */
+const mentionUsers = computed(() => {
+  const projectId = project.value?.id
+  const users = new Map()
+  const scores = new Map()
+
+  const addUser = (user, score = 0) => {
+    if (!user?.id || user.isGroup) return
+    if (user.id === session.user?.id) return
+    if (!users.has(user.id)) users.set(user.id, user)
+    scores.set(user.id, (scores.get(user.id) || 0) + score)
+  }
+
+  for (const journal of journals.value) addUser(journal.user, 3)
+  for (const member of members.value) addUser(member)
+  addUser(issue.value?.author, 1)
+  addUser(issue.value?.assigned_to, 1)
+  for (const watcher of issue.value?.watchers || []) addUser(watcher, 1)
+
+  for (const user of users.values()) {
+    if (projectId) scores.set(user.id, (scores.get(user.id) || 0) + session.projectActivityScore(projectId, user.id))
+  }
+
+  return [...users.values()].sort((a, b) => {
+    const scoreDiff = (scores.get(b.id) || 0) - (scores.get(a.id) || 0)
+    return scoreDiff || fullName(a).localeCompare(fullName(b), 'fr')
+  })
+})
+
 const spentHours = computed(() => {
   if (issue.value?.spent_hours !== undefined && issue.value?.spent_hours !== null) {
     return Number(issue.value.spent_hours)
@@ -383,6 +416,9 @@ async function load({ silent = false } = {}) {
       subjectDraft.value = issue.value.subject || ''
       restoreDraft()
       enrichSprint(issue.value, sequence)
+      // L'activité du projet sert uniquement à ordonner les mentions : on ne
+      // bloque pas l'affichage du ticket si cet appel est lent.
+      loadProjectActivity()
       await Promise.all([loadMembers(), loadVersions()])
     }
   } else {
@@ -437,6 +473,10 @@ async function loadVersions() {
   } catch {
     versions.value = []
   }
+}
+
+async function loadProjectActivity() {
+  if (project.value?.id) await session.loadProjectActivity(project.value.id)
 }
 
 function restoreDraft() {
@@ -1089,7 +1129,9 @@ onBeforeUnmount(() => {
                   v-model="descriptionDraft"
                   min-height="220px"
                   aria-label="Description du ticket"
-                  placeholder="Décrivez le ticket…"
+                  placeholder="Décrivez le ticket… (@ pour mentionner)"
+                  :users="mentionUsers"
+                  :resolve-user="session.resolveUserDetails"
                 />
                 <div class="edit-actions">
                   <button class="btn" type="button" @click="editingDescription = false">Annuler</button>
@@ -1571,7 +1613,9 @@ onBeforeUnmount(() => {
                 min-height="120px"
                 compact
                 aria-label="Votre commentaire"
-                placeholder="Votre commentaire… (Ctrl+V / Cmd+V pour coller une image)"
+                placeholder="Votre commentaire… (@ pour mentionner, Ctrl+V / Cmd+V pour coller une image)"
+                :users="mentionUsers"
+                :resolve-user="session.resolveUserDetails"
               />
               <ul v-if="commentFiles.length" class="comment-files">
                 <li v-for="(file, index) in commentFiles" :key="`${file.name}-${file.size}`">

@@ -469,7 +469,19 @@ export function renderRichText(source = '') {
 }
 
 function inline(text) {
-  return text
+  // Les mentions sont extraites avant le code Textile `@…@` : sans cela,
+  // « @fanny @zakia » serait interprété comme un unique bloc de code.
+  const mentions = []
+  text = text.replace(
+    /(^|[\s(])@([\p{L}\p{N}][\p{L}\p{N}._-]*)(?=[\s,.;:!?)]|$)/gu,
+    (_, prefix, login) => {
+      const index = mentions.length
+      mentions.push(`<span class="mention" data-mention="${login}">@${login}</span>`)
+      return `${prefix}\u0000MENTION${index}\u0000`
+    },
+  )
+
+  text = text
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/@([^@\n]+)@/g, '<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
@@ -477,4 +489,6 @@ function inline(text) {
     .replace(/(^|[\s(])\*([^*\n]+)\*/g, '$1<strong>$2</strong>')
     .replace(/(^|[\s(])_([^_\n]+)_/g, '$1<em>$2</em>')
     .replace(/~~([^~]+)~~/g, '<del>$1</del>')
+
+  return text.replace(/\u0000MENTION(\d+)\u0000/g, (_, index) => mentions[Number(index)] || '')
 }

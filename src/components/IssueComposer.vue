@@ -8,7 +8,7 @@ import { useSettingsStore } from '../stores/settings.js'
 import { useSessionStore } from '../stores/session.js'
 import { useToastStore } from '../stores/toast.js'
 import { useUiStore } from '../stores/ui.js'
-import { formatFileSize, parseHoursInput, toIsoDate } from '../lib/format.js'
+import { formatFileSize, fullName, parseHoursInput, toIsoDate } from '../lib/format.js'
 import { ApiError } from '../lib/api.js'
 
 const props = defineProps({
@@ -46,6 +46,18 @@ const error = ref('')
 
 const selectedProject = computed(() =>
   session.projects.find((project) => project.id === Number(form.project_id)),
+)
+
+const mentionUsers = computed(() =>
+  [...members.value]
+    .filter((member) => !member.isGroup && member.id !== session.user?.id)
+    .sort((a, b) => {
+      const projectId = Number(form.project_id)
+      const scoreDiff =
+        session.projectActivityScore(projectId, b.id) -
+        session.projectActivityScore(projectId, a.id)
+      return scoreDiff || fullName(a).localeCompare(fullName(b), 'fr')
+    }),
 )
 
 const availableTrackers = computed(() => {
@@ -101,6 +113,8 @@ async function loadMembers() {
   }
   loadingMembers.value = true
   try {
+    // Le classement des mentions se met à jour en arrière-plan.
+    session.loadProjectActivity(Number(form.project_id))
     const result = await session.membersFor(Number(form.project_id))
     const list = [...result]
     if (session.user && !list.some((member) => member.id === session.user.id)) {
@@ -261,7 +275,9 @@ async function submit() {
             v-model="form.description"
             min-height="200px"
             aria-label="Description du ticket"
-            placeholder="Contexte, étapes de reproduction, résultat attendu…"
+            placeholder="Contexte, étapes de reproduction, résultat attendu… (@ pour mentionner)"
+            :users="mentionUsers"
+            :resolve-user="session.resolveUserDetails"
           />
           <span class="field-hint">
             Mise en forme rapide ; l'icône source permet d'éditer le Textile.

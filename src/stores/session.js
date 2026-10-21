@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { useSettingsStore } from './settings.js'
 
 const membershipCache = new Map()
+const userDetailsCache = new Map()
 
 export const useSessionStore = defineStore('session', () => {
   const settings = useSettingsStore()
@@ -17,6 +18,7 @@ export const useSessionStore = defineStore('session', () => {
   const ready = ref(false)
   const error = ref(null)
   const loadedAt = ref(0)
+  const projectActivity = ref(new Map())
 
   const defaultStatus = computed(
     () => statuses.value.find((status) => status.is_default) || statuses.value[0] || null,
@@ -124,7 +126,11 @@ export const useSessionStore = defineStore('session', () => {
     if (membershipCache.has(key)) return membershipCache.get(key)
     const data = await settings.api.projectMembers(projectId, { limit: 100 })
     const members = (data?.memberships || [])
-      .map((membership) => membership.user || membership.group)
+      .map((membership) => {
+        if (membership.user) return { ...membership.user, isGroup: false }
+        if (membership.group) return { ...membership.group, isGroup: true }
+        return null
+      })
       .filter(Boolean)
     const unique = []
     const seen = new Set()
@@ -140,6 +146,68 @@ export const useSessionStore = defineStore('session', () => {
     return unique
   }
 
+  /**
+   * Les membres d'un projet ne sont exposés qu'avec leur id et leur nom par
+   * Redmine 3.4. On complète à la demande avec `/users/:id.json` pour obtenir
+   * le login utilisé dans les mentions `@login`.
+   */
+  async function resolveUserDetails(userToResolve) {
+    if (!userToResolve?.id) return userToResolve
+    if (userToResolve.login) return userToResolve
+    const key = String(userToResolve.id)
+    if (userDetailsCache.has(key)) {
+      return { ...userToResolve, ...userDetailsCache.get(key) }
+    }
+    try {
+      const data = await settings.api.user(userToResolve.id)
+      const details = data?.user || {}
+      userDetailsCache.set(key, details)
+      return { ...userToResolve, ...details }
+    } catch {
+      // Les groupes et certains comptes ne sont pas accessibles via
+      // `/users/:id.json` : on conserve les informations déjà connues.
+      userDetailsCache.set(key, {})
+      return userToResolve
+    }
+  }
+
+  /**
+   * Activité récente du projet, utilisée pour classer les suggestions de
+   * mentions. On privilégie les dernières saisies de temps, complétées dans
+   * les vues par l'activité du ticket courant.
+   */
+  async function loadProjectActivity(projectId) {
+    if (!projectId) return new Map()
+    const key = String(projectId)
+    if (projectActivity.value.has(key)) return projectActivity.value.get(key)
+    try {
+      const data = await settings.api.timeEntries({
+        project_id: projectId,
+        limit: 100,
+        sort: 'spent_on:desc',
+      })
+      const scores = new Map()
+      for (const entry of data?.time_entries || []) {
+        const userId = entry.user?.id
+        if (!userId) continue
+        scores.set(
+          userId,
+          (scores.get(userId) || 0) + Number(entry.hours || 0) + 0.5,
+        )
+      }
+      projectActivity.value = new Map(projectActivity.value).set(key, scores)
+      return scores
+    } catch {
+      projectActivity.value = new Map(projectActivity.value).set(key, new Map())
+      return new Map()
+    }
+  }
+
+  function projectActivityScore(projectId, userId) {
+    if (!projectId || !userId) return 0
+    return projectActivity.value.get(String(projectId))?.get(Number(userId)) || 0
+  }
+
   function reset() {
     user.value = null
     statuses.value = []
@@ -150,7 +218,9 @@ export const useSessionStore = defineStore('session', () => {
     ready.value = false
     error.value = null
     loadedAt.value = 0
+    projectActivity.value = new Map()
     membershipCache.clear()
+    userDetailsCache.clear()
   }
 
   return {
@@ -164,6 +234,7 @@ export const useSessionStore = defineStore('session', () => {
     ready,
     error,
     loadedAt,
+    projectActivity,
     defaultStatus,
     defaultPriority,
     defaultTracker,
@@ -176,6 +247,9 @@ export const useSessionStore = defineStore('session', () => {
     priorityById,
     projectById,
     membersFor,
+    resolveUserDetails,
+    loadProjectActivity,
+    projectActivityScore,
     reset,
   }
 })

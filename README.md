@@ -24,6 +24,9 @@ toutes les requêtes passent par le petit proxy same-origin intégré à l'appli
   ouverts par défaut), historique des modifications compact, rédaction et édition des notes avec
   un éditeur enrichi, notes privées, pièces jointes visibles sous chaque commentaire, collage
   d'une image du presse-papiers (`Ctrl+V` / `⌘+V`) et brouillons conservés localement.
+- **Mentions `@`** : autocomplétion avec recherche dans les descriptions et les commentaires,
+  suggestions classées par activité (ticket courant puis saisies de temps du projet), insertion
+  au format Redmine `@login` et mise en évidence dans les contenus affichés.
 - **Composeur latéral** : l'ajout d'un commentaire se fait dans la colonne de droite, sans
   masquer les commentaires précédents.
 - **Temps** : saisie rapide, édition/suppression, feuille de temps hebdomadaire, répartition
