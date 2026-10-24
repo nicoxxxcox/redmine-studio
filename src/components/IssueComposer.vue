@@ -413,7 +413,7 @@ async function submit() {
   border-radius: var(--radius-sm);
   background: var(--surface-2);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14.5px;
   font-weight: 550;
   cursor: pointer;
   transition: all var(--transition);
@@ -445,7 +445,7 @@ async function submit() {
   border-radius: 7px;
   background: var(--surface-2);
   border: 1px solid var(--line);
-  font-size: 11.5px;
+  font-size: 14px;
   color: var(--ink-soft);
 }
 
@@ -474,14 +474,14 @@ async function submit() {
   border-radius: 8px;
   background: var(--red-soft);
   color: var(--red);
-  font-size: 12px;
+  font-size: 14.5px;
 }
 
 .upload-progress {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 11.5px;
+  font-size: 14px;
   color: var(--muted);
 }
 

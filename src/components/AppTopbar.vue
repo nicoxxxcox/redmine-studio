@@ -111,7 +111,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
 }
 
 .topbar-eyebrow {
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 650;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -119,7 +119,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
 }
 
 .topbar-page {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 650;
   letter-spacing: -0.02em;
   overflow: hidden;
@@ -145,7 +145,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
   border-radius: 9px;
   background: var(--surface);
   color: var(--faint);
-  font-size: 12px;
+  font-size: 14.5px;
   text-align: left;
   transition: border-color var(--transition), box-shadow var(--transition);
 }
@@ -163,7 +163,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
 }
 
 .search-trigger .kbd {
-  font-size: 9.5px;
+  font-size: 12px;
   height: 19px;
 }
 

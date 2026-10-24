@@ -130,7 +130,7 @@ onMounted(boot)
 
 .boot-title {
   margin-top: 8px;
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 700;
   letter-spacing: -0.04em;
 }
@@ -143,7 +143,7 @@ onMounted(boot)
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 12px;
+  font-size: 14.5px;
   color: var(--muted);
 }
 
@@ -174,12 +174,12 @@ onMounted(boot)
 }
 
 .connection-title {
-  font-size: 19px;
+  font-size: 20px;
   margin-bottom: 7px;
 }
 
 .connection-text {
-  font-size: 12.5px;
+  font-size: 15px;
   line-height: 1.6;
   color: var(--muted);
 }
@@ -194,7 +194,7 @@ onMounted(boot)
 
 .connection-url {
   margin-top: 16px;
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--faint);
   overflow-wrap: anywhere;
 }

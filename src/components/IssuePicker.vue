@@ -231,7 +231,7 @@ onBeforeUnmount(() => {
 
 .picker-hint {
   padding: 5px 8px 4px;
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 650;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -257,21 +257,21 @@ onBeforeUnmount(() => {
 }
 
 .picker-id {
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--faint);
   flex: none;
 }
 
 .picker-subject {
   flex: 1;
-  font-size: 12px;
+  font-size: 14.5px;
   min-width: 0;
 }
 
 .picker-empty,
 .picker-loading {
   padding: 14px 10px;
-  font-size: 12px;
+  font-size: 14.5px;
   color: var(--muted);
   text-align: center;
 }
@@ -306,17 +306,17 @@ onBeforeUnmount(() => {
 }
 
 .picker-selected-id {
-  font-size: 10px;
+  font-size: 12.5px;
   color: var(--faint);
 }
 
 .picker-selected-subject {
-  font-size: 12px;
+  font-size: 14.5px;
   font-weight: 550;
 }
 
 .picker-selected-project {
-  font-size: 10px;
+  font-size: 12.5px;
   color: var(--faint);
 }
 

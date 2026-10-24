@@ -270,7 +270,7 @@ onBeforeUnmount(cleanup)
 .lightbox-title {
   overflow: hidden;
   color: #fff;
-  font-size: 13px;
+  font-size: 15.5px;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -278,7 +278,7 @@ onBeforeUnmount(cleanup)
 
 .lightbox-sub {
   color: rgba(255, 255, 255, 0.55);
-  font-size: 10.5px;
+  font-size: 13px;
 }
 
 .lightbox-actions {
@@ -374,7 +374,7 @@ onBeforeUnmount(cleanup)
   flex: none;
   padding: 10px 20px 16px;
   color: rgba(255, 255, 255, 0.5);
-  font-size: 10.5px;
+  font-size: 13px;
   text-align: center;
 }
 

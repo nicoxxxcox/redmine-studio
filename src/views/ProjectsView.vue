@@ -159,7 +159,7 @@ function newIssue(project) {
   border-radius: 11px;
   background: hsl(var(--hue) 62% 54% / 0.13);
   color: hsl(var(--hue) 55% 38%);
-  font-size: 12px;
+  font-size: 14.5px;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -170,7 +170,7 @@ function newIssue(project) {
 }
 
 .project-status {
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 600;
   padding: 2px 7px;
   border-radius: 999px;
@@ -184,7 +184,7 @@ function newIssue(project) {
 }
 
 .project-name {
-  font-size: 15.5px;
+  font-size: 17.5px;
   font-weight: 650;
   letter-spacing: -0.02em;
   line-height: 1.3;
@@ -192,14 +192,14 @@ function newIssue(project) {
 
 .project-identifier {
   margin-top: 2px;
-  font-size: 10px;
+  font-size: 12.5px;
   color: var(--faint);
 }
 
 .project-description {
   margin-top: 10px;
   min-height: 38px;
-  font-size: 11.5px;
+  font-size: 14px;
   line-height: 1.55;
   color: var(--muted);
 }
@@ -210,7 +210,7 @@ function newIssue(project) {
   gap: 12px;
   flex-wrap: wrap;
   margin-top: 14px;
-  font-size: 10px;
+  font-size: 12.5px;
   color: var(--faint);
 }
 
@@ -238,7 +238,7 @@ function newIssue(project) {
   border: 0;
   background: transparent;
   color: var(--accent);
-  font-size: 11.5px;
+  font-size: 14px;
   font-weight: 600;
   padding: 0;
   text-align: left;

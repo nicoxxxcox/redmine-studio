@@ -497,7 +497,7 @@ watch(() => refresh.timeVersion, load)
 
 <style scoped>
 .dash-date {
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -515,7 +515,7 @@ watch(() => refresh.timeVersion, load)
   border-radius: var(--radius);
   background: var(--red-soft);
   color: var(--red);
-  font-size: 12px;
+  font-size: 14.5px;
 }
 
 .dash-error .btn {
@@ -585,7 +585,7 @@ watch(() => refresh.timeVersion, load)
 }
 
 .stat-label {
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--muted);
   white-space: nowrap;
@@ -595,7 +595,7 @@ watch(() => refresh.timeVersion, load)
 
 .stat-value {
   margin-top: 3px;
-  font-size: 25px;
+  font-size: 26px;
   font-weight: 650;
   line-height: 1.1;
   letter-spacing: -0.04em;
@@ -603,13 +603,13 @@ watch(() => refresh.timeVersion, load)
 }
 
 .stat-value.is-text {
-  font-size: 20px;
+  font-size: 21px;
   margin-top: 6px;
 }
 
 .stat-hint {
   margin-top: 2px;
-  font-size: 10px;
+  font-size: 12.5px;
   color: var(--faint);
   white-space: nowrap;
   overflow: hidden;
@@ -654,7 +654,7 @@ watch(() => refresh.timeVersion, load)
 
 .card-sub {
   margin-top: 2px;
-  font-size: 11px;
+  font-size: 13.5px;
   color: var(--faint);
 }
 
@@ -694,7 +694,7 @@ watch(() => refresh.timeVersion, load)
 }
 
 .priority-id {
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--faint);
   min-width: 44px;
   flex: none;
@@ -709,7 +709,7 @@ watch(() => refresh.timeVersion, load)
 }
 
 .priority-subject {
-  font-size: 12.5px;
+  font-size: 15px;
   font-weight: 550;
 }
 
@@ -722,7 +722,7 @@ watch(() => refresh.timeVersion, load)
   align-items: center;
   gap: 9px;
   min-width: 0;
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--faint);
 }
 
@@ -773,14 +773,14 @@ watch(() => refresh.timeVersion, load)
 }
 
 .week-number {
-  font-size: 27px;
+  font-size: 28px;
   font-weight: 650;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
 }
 
 .week-caption {
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--faint);
 }
 
@@ -808,7 +808,7 @@ watch(() => refresh.timeVersion, load)
 }
 
 .week-bar-value {
-  font-size: 9px;
+  font-size: 12px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   min-height: 11px;
@@ -843,7 +843,7 @@ watch(() => refresh.timeVersion, load)
 }
 
 .week-bar-label {
-  font-size: 9px;
+  font-size: 12px;
   color: var(--faint);
   text-transform: capitalize;
 }
@@ -861,7 +861,7 @@ watch(() => refresh.timeVersion, load)
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
-  font-size: 11px;
+  font-size: 13.5px;
   font-weight: 550;
   color: var(--muted);
 }
@@ -920,12 +920,12 @@ watch(() => refresh.timeVersion, load)
 }
 
 .quick-action strong {
-  font-size: 12px;
+  font-size: 14.5px;
   font-weight: 600;
 }
 
 .quick-action span span {
-  font-size: 10px;
+  font-size: 12.5px;
   color: var(--faint);
 }
 
@@ -938,14 +938,14 @@ watch(() => refresh.timeVersion, load)
   padding: 8px 9px 3px;
   border-top: 1px solid var(--line);
   margin-top: 5px;
-  font-size: 9.5px;
+  font-size: 12px;
   color: var(--faint);
 }
 
 .quick-tip .kbd {
   height: 17px;
   min-width: 17px;
-  font-size: 9px;
+  font-size: 12px;
   margin: 0 2px;
 }
 
@@ -968,7 +968,7 @@ watch(() => refresh.timeVersion, load)
   align-items: center;
   gap: 12px;
   padding: 0 16px 7px;
-  font-size: 10px;
+  font-size: 12.5px;
   font-weight: 650;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -1000,7 +1000,7 @@ watch(() => refresh.timeVersion, load)
   padding: 9px 16px;
   border-bottom: 1px solid var(--line);
   color: var(--ink);
-  font-size: 12px;
+  font-size: 14.5px;
   text-decoration: none;
 }
 
@@ -1014,7 +1014,7 @@ watch(() => refresh.timeVersion, load)
 }
 
 .recent-id {
-  font-size: 10px;
+  font-size: 12.5px;
   color: var(--faint);
 }
 
@@ -1023,12 +1023,12 @@ watch(() => refresh.timeVersion, load)
 }
 
 .recent-project {
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--faint);
 }
 
 .recent-time {
-  font-size: 10px;
+  font-size: 12.5px;
   color: var(--faint);
   text-align: right;
 }
@@ -1039,7 +1039,7 @@ watch(() => refresh.timeVersion, load)
   justify-content: center;
   gap: 7px;
   padding: 26px;
-  font-size: 12px;
+  font-size: 14.5px;
   color: var(--muted);
 }
 
@@ -1081,10 +1081,10 @@ watch(() => refresh.timeVersion, load)
     height: 30px;
   }
   .stat-value {
-    font-size: 21px;
+    font-size: 22px;
   }
   .stat-value.is-text {
-    font-size: 16px;
+    font-size: 18px;
   }
   .dash-side {
     grid-template-columns: minmax(0, 1fr);

@@ -1918,7 +1918,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 7px;
   margin-bottom: 12px;
-  font-size: 11px;
+  font-size: 13.5px;
   color: var(--faint);
 }
 
@@ -1929,7 +1929,7 @@ onBeforeUnmount(() => {
   border: 0;
   background: transparent;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13.5px;
   font-weight: 550;
   padding: 3px 5px;
   border-radius: 5px;
@@ -1986,7 +1986,7 @@ onBeforeUnmount(() => {
   border-radius: 999px;
   background: var(--red-soft);
   color: var(--red);
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 650;
 }
 
@@ -1994,14 +1994,14 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: baseline;
   gap: 9px;
-  font-size: 25px;
+  font-size: 26px;
   line-height: 1.25;
   letter-spacing: -0.035em;
   max-width: 900px;
 }
 
 .detail-id {
-  font-size: 16px;
+  font-size: 18px;
   color: var(--faint);
   font-weight: 500;
   flex: none;
@@ -2039,7 +2039,7 @@ onBeforeUnmount(() => {
 }
 
 .subject-input {
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 600;
   height: 42px;
 }
@@ -2050,7 +2050,7 @@ onBeforeUnmount(() => {
   gap: 14px;
   flex-wrap: wrap;
   margin-top: 9px;
-  font-size: 11.5px;
+  font-size: 14px;
   color: var(--muted);
 }
 
@@ -2192,7 +2192,7 @@ onBeforeUnmount(() => {
   gap: 6px;
   min-width: 0;
   padding: 5px 6px;
-  font-size: 9.5px;
+  font-size: 12px;
 }
 
 .attachment-preview-name .truncate {
@@ -2221,7 +2221,7 @@ onBeforeUnmount(() => {
   border-radius: 7px;
   background: var(--surface-2);
   color: var(--ink-soft);
-  font-size: 10.5px;
+  font-size: 13px;
 }
 
 .attachment-chip:hover {
@@ -2257,7 +2257,7 @@ onBeforeUnmount(() => {
 }
 
 .journal-sort span {
-  font-size: 10.5px;
+  font-size: 13px;
 }
 
 .journal-tool {
@@ -2327,7 +2327,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 7px;
   flex-wrap: wrap;
-  font-size: 11.5px;
+  font-size: 14px;
 }
 
 .journal-toggle {
@@ -2366,7 +2366,7 @@ onBeforeUnmount(() => {
   border-radius: 5px;
   background: transparent;
   color: var(--faint);
-  font-size: 10px;
+  font-size: 12.5px;
   font-weight: 550;
   opacity: 0;
   transition: opacity var(--transition), background var(--transition), color var(--transition);
@@ -2392,7 +2392,7 @@ onBeforeUnmount(() => {
   background: transparent;
   color: var(--muted);
   text-align: left;
-  font-size: 11.5px;
+  font-size: 14px;
   cursor: pointer;
 }
 
@@ -2409,7 +2409,7 @@ onBeforeUnmount(() => {
 
 .timeline-time {
   color: var(--faint);
-  font-size: 10.5px;
+  font-size: 13px;
 }
 
 .timeline-item.is-history {
@@ -2432,12 +2432,12 @@ onBeforeUnmount(() => {
   flex: 1;
   flex-wrap: wrap;
   min-width: 0;
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--muted);
 }
 
 .journal-history-line .strong {
-  font-size: 10.5px;
+  font-size: 13px;
 }
 
 .journal-history-text {
@@ -2448,7 +2448,7 @@ onBeforeUnmount(() => {
 .journal-history-time {
   margin-left: auto;
   color: var(--faint);
-  font-size: 9.5px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -2473,7 +2473,7 @@ onBeforeUnmount(() => {
   border-radius: 999px;
   background: var(--amber-soft);
   color: var(--amber);
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -2489,7 +2489,7 @@ onBeforeUnmount(() => {
   border-radius: 5px;
   background: var(--surface-3);
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -2502,7 +2502,7 @@ onBeforeUnmount(() => {
 }
 
 .journal-note :deep(.rich-text) {
-  font-size: 12.5px;
+  font-size: 15px;
 }
 
 .journal-attachments {
@@ -2535,11 +2535,11 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   gap: 1px;
   min-width: 0;
-  font-size: 11.5px;
+  font-size: 14px;
 }
 
 .draft-saved {
-  font-size: 9.5px;
+  font-size: 12px;
   color: var(--green);
 }
 
@@ -2561,7 +2561,7 @@ onBeforeUnmount(() => {
   border-radius: 7px;
   background: var(--surface);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13.5px;
   cursor: pointer;
 }
 
@@ -2575,7 +2575,7 @@ onBeforeUnmount(() => {
 }
 
 .private-check {
-  font-size: 11px;
+  font-size: 13.5px;
   color: var(--muted);
 }
 
@@ -2595,7 +2595,7 @@ onBeforeUnmount(() => {
   border-radius: 6px;
   background: var(--surface);
   border: 1px solid var(--line);
-  font-size: 10.5px;
+  font-size: 13px;
 }
 
 .comment-files li .truncate {
@@ -2620,7 +2620,7 @@ onBeforeUnmount(() => {
 
 .composer-error {
   margin-top: 7px;
-  font-size: 11px;
+  font-size: 13.5px;
   color: var(--red);
 }
 
@@ -2642,7 +2642,7 @@ onBeforeUnmount(() => {
 }
 
 .property-label {
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--muted);
   flex: none;
   width: 92px;
@@ -2651,7 +2651,7 @@ onBeforeUnmount(() => {
 .property-control {
   min-height: 30px;
   padding: 4px 8px;
-  font-size: 11px;
+  font-size: 13.5px;
   border-color: transparent;
   background-color: transparent;
   box-shadow: none;
@@ -2687,7 +2687,7 @@ select.property-control {
 }
 
 .property-input-suffix span {
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--faint);
 }
 
@@ -2715,14 +2715,14 @@ select.property-control {
 }
 
 .time-card-number {
-  font-size: 23px;
+  font-size: 24px;
   font-weight: 650;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
 }
 
 .time-card-label {
-  font-size: 10px;
+  font-size: 12.5px;
   color: var(--faint);
 }
 
@@ -2742,7 +2742,7 @@ select.property-control {
   justify-content: space-between;
   gap: 12px;
   padding: 5px 0;
-  font-size: 11px;
+  font-size: 13.5px;
 }
 
 .meta-label {
@@ -2778,7 +2778,7 @@ select.property-control {
   border-radius: 6px;
   background: transparent;
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: 13px;
   text-align: left;
 }
 
@@ -2804,7 +2804,7 @@ select.property-control {
 }
 
 .time-stat-label {
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 650;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -2812,7 +2812,7 @@ select.property-control {
 }
 
 .time-stat-value {
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 650;
   letter-spacing: -0.03em;
 }
@@ -2836,7 +2836,7 @@ select.property-control {
   gap: 9px;
   padding: 8px 16px;
   border-bottom: 1px solid var(--line);
-  font-size: 11px;
+  font-size: 13.5px;
 }
 
 .time-entry-row:last-child {
@@ -2848,7 +2848,7 @@ select.property-control {
   align-items: center;
   gap: 4px;
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: 13px;
 }
 
 .time-entry-user {
@@ -2857,7 +2857,7 @@ select.property-control {
 
 .time-entry-activity {
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2865,7 +2865,7 @@ select.property-control {
 
 .time-entry-comment {
   color: var(--faint);
-  font-size: 10.5px;
+  font-size: 13px;
 }
 
 .time-entry-hours {
@@ -2930,7 +2930,7 @@ select.property-control {
 }
 
 .file-name {
-  font-size: 12px;
+  font-size: 14.5px;
   font-weight: 550;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2955,7 +2955,7 @@ select.property-control {
 }
 
 .file-meta {
-  font-size: 10px;
+  font-size: 12.5px;
   color: var(--faint);
 }
 
@@ -2977,7 +2977,7 @@ select.property-control {
   border: 1px solid var(--line);
   border-radius: 7px;
   color: var(--ink);
-  font-size: 11.5px;
+  font-size: 14px;
   background: var(--surface-2);
 }
 
@@ -2987,7 +2987,7 @@ select.property-control {
 }
 
 .relation-type {
-  font-size: 10px;
+  font-size: 12.5px;
   font-weight: 650;
   color: var(--accent);
   padding: 1px 6px;
@@ -3007,7 +3007,7 @@ select.property-control {
 
 .relations-subtitle {
   margin: 16px 0 7px;
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 650;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -3071,7 +3071,7 @@ select.property-control {
   border-radius: 7px;
   background: transparent;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 14px;
   font-weight: 550;
   white-space: nowrap;
 }
@@ -3135,11 +3135,11 @@ select.property-control {
 
 @media (max-width: 640px) {
   .detail-title {
-    font-size: 20px;
+    font-size: 21px;
     flex-wrap: wrap;
   }
   .detail-id {
-    font-size: 13px;
+    font-size: 15.5px;
   }
   .detail-side {
     grid-template-columns: minmax(0, 1fr);

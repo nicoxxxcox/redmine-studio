@@ -418,7 +418,7 @@ function back() {
 }
 
 .setup-logo-text {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.035em;
 }
@@ -439,7 +439,7 @@ function back() {
 }
 
 .setup-kicker {
-  font-size: 10px;
+  font-size: 12.5px;
   font-weight: 650;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -463,7 +463,7 @@ function back() {
 .setup-lead {
   max-width: 410px;
   margin-top: 22px;
-  font-size: 13.5px;
+  font-size: 16px;
   line-height: 1.7;
   color: rgba(255, 255, 255, 0.55);
 }
@@ -496,13 +496,13 @@ function back() {
 
 .setup-features strong {
   display: block;
-  font-size: 12.5px;
+  font-size: 15px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.9);
 }
 
 .setup-features span:last-child {
-  font-size: 11.5px;
+  font-size: 14px;
   color: rgba(255, 255, 255, 0.45);
   line-height: 1.5;
 }
@@ -515,7 +515,7 @@ function back() {
   justify-content: space-between;
   padding-top: 22px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 10.5px;
+  font-size: 13px;
   color: rgba(255, 255, 255, 0.4);
 }
 
@@ -574,7 +574,7 @@ function back() {
   border-radius: 999px;
   background: var(--accent-soft);
   color: var(--accent);
-  font-size: 10px;
+  font-size: 12.5px;
   font-weight: 650;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -589,13 +589,13 @@ function back() {
 
 .setup-title {
   margin-top: 14px;
-  font-size: 25px;
+  font-size: 26px;
   letter-spacing: -0.035em;
 }
 
 .setup-subtitle {
   margin-top: 7px;
-  font-size: 12.5px;
+  font-size: 15px;
   line-height: 1.6;
   color: var(--muted);
 }
@@ -612,7 +612,7 @@ function back() {
 }
 
 .remember-check {
-  font-size: 11.5px;
+  font-size: 14px;
   flex-wrap: wrap;
   row-gap: 2px;
 }
@@ -623,7 +623,7 @@ function back() {
   align-items: flex-start;
   padding: 11px 13px;
   border-radius: var(--radius);
-  font-size: 12px;
+  font-size: 14.5px;
 }
 
 .test-result.is-success {
@@ -637,7 +637,7 @@ function back() {
 }
 
 .test-result .strong {
-  font-size: 12px;
+  font-size: 14.5px;
   margin-bottom: 2px;
 }
 
@@ -653,7 +653,7 @@ function back() {
 
 .test-hint code {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 13px;
   padding: 1px 4px;
   border-radius: 4px;
   background: var(--surface);
@@ -686,7 +686,7 @@ function back() {
 }
 
 .setup-security p {
-  font-size: 10.5px;
+  font-size: 13px;
   line-height: 1.55;
 }
 
@@ -694,7 +694,7 @@ function back() {
   max-width: 470px;
   margin-top: 16px;
   text-align: center;
-  font-size: 10.5px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--faint);
 }

@@ -165,14 +165,14 @@ onBeforeUnmount(() => {
 }
 
 .modal-title {
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 650;
   letter-spacing: -0.02em;
 }
 
 .modal-description {
   margin-top: 4px;
-  font-size: 12.5px;
+  font-size: 15px;
   color: var(--muted);
 }
 

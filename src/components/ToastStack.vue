@@ -85,7 +85,7 @@ const icons = {
 
 .toast-message {
   flex: 1;
-  font-size: 12.5px;
+  font-size: 15px;
   line-height: 1.45;
   color: var(--ink-soft);
   overflow-wrap: anywhere;
@@ -98,7 +98,7 @@ const icons = {
   border-radius: 5px;
   background: var(--accent-soft);
   color: var(--accent);
-  font-size: 11.5px;
+  font-size: 14px;
   font-weight: 600;
 }
 

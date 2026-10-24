@@ -457,7 +457,7 @@ function disconnect() {
             <div class="field">
               <label class="field-label" for="default-activity">Activité de temps</label>
               <select id="default-activity" v-model="defaultActivity" class="select">
-                <option value="">Activité par défaut de Redmine</option>
+                <option value="">Par défaut Redmine</option>
                 <option v-for="activity in session.activities" :key="activity.id" :value="String(activity.id)">
                   {{ activity.name }}
                 </option>
@@ -468,7 +468,7 @@ function disconnect() {
             <div class="field">
               <label class="field-label" for="default-status">Statut par défaut</label>
               <select id="default-status" v-model="defaultStatus" class="select">
-                <option value="">Statut par défaut de Redmine</option>
+                <option value="">Par défaut Redmine</option>
                 <option v-for="status in session.statuses" :key="status.id" :value="String(status.id)">
                   {{ status.name }}
                 </option>
@@ -644,7 +644,7 @@ function disconnect() {
 <style scoped>
 .card-sub {
   margin-top: 2px;
-  font-size: 11px;
+  font-size: 13.5px;
   color: var(--faint);
 }
 
@@ -671,7 +671,7 @@ function disconnect() {
   border-radius: 999px;
   background: var(--red-soft);
   color: var(--red);
-  font-size: 10px;
+  font-size: 12.5px;
   font-weight: 650;
 }
 
@@ -696,11 +696,11 @@ function disconnect() {
   gap: 9px;
   padding: 10px 12px;
   border-radius: var(--radius);
-  font-size: 11.5px;
+  font-size: 14px;
 }
 
 .settings-result .strong {
-  font-size: 11.5px;
+  font-size: 14px;
 }
 
 .settings-result p:not(.strong) {
@@ -753,12 +753,12 @@ function disconnect() {
 }
 
 .setting-title {
-  font-size: 12.5px;
+  font-size: 15px;
   font-weight: 600;
 }
 
 .setting-description {
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--muted);
 }
 
@@ -782,7 +782,7 @@ function disconnect() {
   border-radius: 6px;
   background: transparent;
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 550;
 }
 
@@ -810,7 +810,7 @@ function disconnect() {
   border-radius: 999px;
   background: var(--accent-soft);
   color: var(--accent);
-  font-size: 10px;
+  font-size: 12.5px;
   font-weight: 650;
   white-space: nowrap;
 }
@@ -822,7 +822,7 @@ function disconnect() {
 }
 
 .favorites-note {
-  font-size: 10.5px;
+  font-size: 13px;
   line-height: 1.55;
   color: var(--muted);
 }
@@ -849,7 +849,7 @@ function disconnect() {
   border-radius: 6px;
   background: transparent;
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 550;
 }
 
@@ -873,7 +873,7 @@ function disconnect() {
   border-radius: 999px;
   background: var(--accent-soft);
   color: var(--accent);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -896,7 +896,7 @@ function disconnect() {
   margin-left: auto;
   flex: none;
   color: var(--faint);
-  font-size: 9.5px;
+  font-size: 12px;
 }
 
 .account-card {
@@ -918,13 +918,13 @@ function disconnect() {
 }
 
 .account-name {
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 650;
   letter-spacing: -0.02em;
 }
 
 .account-login {
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--faint);
 }
 
@@ -940,7 +940,7 @@ function disconnect() {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  font-size: 10.5px;
+  font-size: 13px;
 }
 
 .account-row > span:last-child {
@@ -956,7 +956,7 @@ function disconnect() {
 }
 
 .security-note {
-  font-size: 10.5px;
+  font-size: 13px;
   line-height: 1.6;
   color: var(--muted);
   margin-bottom: 4px;
@@ -980,7 +980,7 @@ function disconnect() {
 
 .about-text {
   margin-top: 10px;
-  font-size: 10.5px;
+  font-size: 13px;
   line-height: 1.6;
   color: var(--muted);
 }

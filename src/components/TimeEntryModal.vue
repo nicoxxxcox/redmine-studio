@@ -273,7 +273,7 @@ async function remove() {
   border-radius: 999px;
   background: var(--surface);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13.5px;
   font-weight: 550;
   transition: all var(--transition);
 }
@@ -294,7 +294,7 @@ async function remove() {
   border-radius: 8px;
   background: var(--red-soft);
   color: var(--red);
-  font-size: 12px;
+  font-size: 14.5px;
 }
 
 .footer-delete {

@@ -172,7 +172,7 @@ function clear() {
   border-radius: 999px;
   background: var(--accent-soft);
   color: var(--ink);
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 550;
 }
 
@@ -282,7 +282,7 @@ function clear() {
   gap: 7px;
   min-width: 0;
   flex: 1;
-  font-size: 11.5px;
+  font-size: 14px;
   color: var(--ink-soft);
 }
 
@@ -301,7 +301,7 @@ function clear() {
   margin-left: auto;
   flex: none;
   color: var(--faint);
-  font-size: 9.5px;
+  font-size: 12px;
 }
 
 .favorite-empty,
@@ -312,7 +312,7 @@ function clear() {
   gap: 6px;
   padding: 14px 8px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13.5px;
   text-align: center;
 }
 
@@ -323,7 +323,7 @@ function clear() {
   gap: 8px;
   min-height: 18px;
   color: var(--faint);
-  font-size: 10px;
+  font-size: 12.5px;
 }
 
 .favorite-clear {
@@ -332,7 +332,7 @@ function clear() {
   border-radius: 4px;
   background: transparent;
   color: var(--accent);
-  font-size: 10px;
+  font-size: 12.5px;
   font-weight: 600;
 }
 

@@ -25,7 +25,7 @@ const tone = computed(() => priorityTone(props.priority))
   align-items: center;
   gap: 7px;
   min-width: 0;
-  font-size: 11.5px;
+  font-size: 14px;
   color: var(--muted);
 }
 

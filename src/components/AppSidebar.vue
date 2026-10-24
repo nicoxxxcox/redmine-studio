@@ -278,7 +278,7 @@ async function logout() {
 }
 
 .brand-name {
-  font-size: 14.5px;
+  font-size: 16.5px;
   font-weight: 700;
   letter-spacing: -0.035em;
   line-height: 1.2;
@@ -290,7 +290,7 @@ async function logout() {
 }
 
 .brand-sub {
-  font-size: 10px;
+  font-size: 12.5px;
   color: var(--faint);
   letter-spacing: 0.02em;
 }
@@ -323,7 +323,7 @@ async function logout() {
 .nav-label {
   padding: 0 9px;
   margin-bottom: 4px;
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -341,7 +341,7 @@ async function logout() {
   border-radius: 8px;
   background: transparent;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 15px;
   font-weight: 500;
   text-align: left;
   transition: background var(--transition), color var(--transition);
@@ -388,7 +388,7 @@ async function logout() {
 }
 
 .sidebar-user-text .strong {
-  font-size: 12px;
+  font-size: 14.5px;
 }
 
 .sidebar-status {
@@ -396,7 +396,7 @@ async function logout() {
   align-items: center;
   gap: 6px;
   padding: 9px 9px 2px;
-  font-size: 10px;
+  font-size: 12.5px;
   color: var(--faint);
   letter-spacing: 0.01em;
 }

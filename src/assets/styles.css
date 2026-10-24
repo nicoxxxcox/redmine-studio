@@ -17,7 +17,7 @@
   --ink: #17191e;
   --ink-soft: #3c414c;
   --muted: #707784;
-  --faint: #9ba1ab;
+  --faint: #767d89;
   --line: #e6e6df;
   --line-strong: #d6d6cd;
 
@@ -72,7 +72,7 @@
   --ink: #f1f2f4;
   --ink-soft: #c6cad1;
   --muted: #949ba7;
-  --faint: #6b7280;
+  --faint: #7c8491;
   --line: #262a31;
   --line-strong: #343942;
 
@@ -122,7 +122,7 @@ html {
 body {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.55;
   color: var(--ink);
   background: var(--bg);
@@ -263,17 +263,17 @@ ol {
 }
 
 .text-sm {
-  font-size: 12.5px;
+  font-size: 15px;
 }
 .text-xs {
-  font-size: 11.5px;
+  font-size: 14px;
 }
 .text-lg {
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .eyebrow {
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 650;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -329,7 +329,7 @@ ol {
 }
 
 .page-title {
-  font-size: 27px;
+  font-size: 28px;
   font-weight: 650;
   letter-spacing: -0.035em;
 }
@@ -337,7 +337,7 @@ ol {
 .page-subtitle {
   margin-top: 5px;
   color: var(--muted);
-  font-size: 13.5px;
+  font-size: 16px;
 }
 
 .page-actions {
@@ -412,7 +412,7 @@ ol {
 }
 
 .card-title {
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 650;
   letter-spacing: -0.01em;
   display: flex;
@@ -462,7 +462,7 @@ ol {
   border: 1px solid var(--btn-border);
   background: var(--btn-bg);
   color: var(--btn-ink);
-  font-size: 13px;
+  font-size: 15.5px;
   font-weight: 550;
   line-height: 1;
   white-space: nowrap;
@@ -545,7 +545,7 @@ ol {
 .btn-sm {
   min-height: 30px;
   padding: 5px 9px;
-  font-size: 12px;
+  font-size: 14.5px;
   border-radius: var(--radius-xs);
   gap: 5px;
 }
@@ -558,7 +558,7 @@ ol {
 .btn-lg {
   min-height: 42px;
   padding: 10px 18px;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .btn-icon {
@@ -599,20 +599,20 @@ ol {
 }
 
 .field-label {
-  font-size: 11.5px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--muted);
   letter-spacing: 0.01em;
 }
 
 .field-hint {
-  font-size: 11.5px;
+  font-size: 14px;
   color: var(--faint);
   line-height: 1.45;
 }
 
 .field-error {
-  font-size: 12px;
+  font-size: 14.5px;
   color: var(--red);
 }
 
@@ -626,7 +626,7 @@ ol {
   border-radius: var(--radius-sm);
   background-color: var(--surface);
   color: var(--ink);
-  font-size: 13px;
+  font-size: 15.5px;
   transition:
     border-color var(--transition),
     box-shadow var(--transition),
@@ -710,7 +710,7 @@ ol {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12.5px;
+  font-size: 15px;
   color: var(--ink-soft);
   cursor: pointer;
   user-select: none;
@@ -756,7 +756,7 @@ ol {
   gap: 10px;
   cursor: pointer;
   user-select: none;
-  font-size: 13px;
+  font-size: 15.5px;
 }
 
 .switch input {
@@ -824,7 +824,7 @@ ol {
   justify-self: start;
   padding: 0 8px;
   border-radius: 999px;
-  font-size: 11.5px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.005em;
   white-space: nowrap;
@@ -891,7 +891,7 @@ ol {
 .status-badge {
   height: 20px;
   padding: 0 7px;
-  font-size: 10.5px;
+  font-size: 13px;
   gap: 4px;
   background: hsl(var(--status-hue, 210) 72% 95%);
   color: hsl(var(--status-hue, 210) 60% 32%);
@@ -914,7 +914,7 @@ ol {
   padding: 2px 8px;
   height: 21px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 13.5px;
   font-weight: 600;
   background: var(--slate-soft);
   color: var(--slate);
@@ -960,7 +960,7 @@ ol {
   border-radius: var(--radius-xs);
   background: var(--surface-3);
   color: var(--ink-soft);
-  font-size: 11.5px;
+  font-size: 14px;
   font-weight: 500;
 }
 
@@ -977,7 +977,7 @@ ol {
   background: var(--surface-2);
   color: var(--muted);
   font-family: var(--font-sans);
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -1033,7 +1033,7 @@ ol {
   border: 0;
   background: transparent;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 15px;
   font-weight: 550;
   border-radius: var(--radius-xs) var(--radius-xs) 0 0;
   transition: color var(--transition), background var(--transition);
@@ -1069,7 +1069,7 @@ ol {
   border-radius: 999px;
   background: var(--surface-3);
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12.5px;
   font-weight: 650;
 }
 
@@ -1093,7 +1093,7 @@ ol {
   border-radius: 6px;
   background: transparent;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 14px;
   font-weight: 550;
   transition: all var(--transition);
 }
@@ -1144,13 +1144,13 @@ ol {
 }
 
 .empty-title {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
 }
 
 .empty-text {
   max-width: 380px;
-  font-size: 12.5px;
+  font-size: 15px;
   color: var(--muted);
   line-height: 1.55;
 }
@@ -1263,7 +1263,7 @@ ol {
   border-radius: var(--radius-xs);
   background: transparent;
   color: var(--ink-soft);
-  font-size: 12.5px;
+  font-size: 15px;
   text-align: left;
   transition: background var(--transition), color var(--transition);
 }
@@ -1296,7 +1296,7 @@ ol {
 
 .menu-label {
   padding: 6px 9px 4px;
-  font-size: 10px;
+  font-size: 12.5px;
   font-weight: 650;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1308,7 +1308,7 @@ ol {
    -------------------------------------------------------------------------- */
 
 .rich-text {
-  font-size: 13.5px;
+  font-size: 16px;
   line-height: 1.68;
   color: var(--ink-soft);
   overflow-wrap: anywhere;
@@ -1335,16 +1335,16 @@ ol {
   font-weight: 650;
 }
 .rich-text h1 {
-  font-size: 20px;
+  font-size: 21px;
 }
 .rich-text h2 {
-  font-size: 17px;
+  font-size: 19px;
 }
 .rich-text h3 {
-  font-size: 15px;
+  font-size: 17px;
 }
 .rich-text h4 {
-  font-size: 13.5px;
+  font-size: 16px;
 }
 
 .rich-text ul,
@@ -1381,7 +1381,7 @@ ol {
   background: #171a20;
   color: #e9ecf2;
   overflow-x: auto;
-  font-size: 12px;
+  font-size: 14.5px;
   line-height: 1.55;
 }
 
@@ -1533,7 +1533,7 @@ ol {
   background: transparent;
   color: var(--ink);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 14.5px;
   line-height: 1.6;
   resize: vertical;
 }
@@ -1561,7 +1561,7 @@ ol {
   gap: 5px;
   padding: 4px 6px 7px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12.5px;
   font-weight: 650;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1577,7 +1577,7 @@ ol {
   overflow: hidden;
   color: var(--accent);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12.5px;
   text-overflow: ellipsis;
   text-transform: none;
   white-space: nowrap;
@@ -1614,7 +1614,7 @@ ol {
 .mention-option-name {
   overflow: hidden;
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: 14.5px;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1627,7 +1627,7 @@ ol {
 .mention-option-meta {
   overflow: hidden;
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1636,7 +1636,7 @@ ol {
   margin: 0;
   padding: 10px 8px;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 14px;
   text-align: center;
 }
 
@@ -1696,7 +1696,7 @@ body.is-resizing-columns * {
   border-bottom: 1px solid var(--line);
   background: var(--surface-2);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  font-size: 10px;
+  font-size: 12.5px;
   font-weight: 650;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -1765,7 +1765,7 @@ body.is-resizing-columns * {
   align-items: center;
   gap: 8px;
   margin-top: 4px;
-  font-size: 11px;
+  font-size: 13.5px;
   color: var(--muted);
   flex-wrap: wrap;
 }
@@ -1834,7 +1834,7 @@ body.is-resizing-columns * {
     padding: 18px 14px 88px;
   }
   .page-title {
-    font-size: 23px;
+    font-size: 24px;
   }
   .page-head {
     margin-bottom: 16px;

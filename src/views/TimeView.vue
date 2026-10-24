@@ -489,7 +489,7 @@ onMounted(load)
 }
 
 .week-range {
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 650;
   letter-spacing: -0.02em;
   text-transform: capitalize;
@@ -497,7 +497,7 @@ onMounted(load)
 
 .week-now,
 .week-today-btn {
-  font-size: 10px;
+  font-size: 12.5px;
   color: var(--faint);
   border: 0;
   background: transparent;
@@ -520,7 +520,7 @@ onMounted(load)
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
+  font-size: 13.5px;
   color: var(--muted);
 }
 
@@ -539,7 +539,7 @@ onMounted(load)
   border-radius: var(--radius);
   background: var(--red-soft);
   color: var(--red);
-  font-size: 12px;
+  font-size: 14.5px;
 }
 
 .time-error .btn {
@@ -583,7 +583,7 @@ onMounted(load)
 
 .chart-value {
   min-height: 10px;
-  font-size: 8.5px;
+  font-size: 12px;
   color: var(--faint);
   font-variant-numeric: tabular-nums;
 }
@@ -614,7 +614,7 @@ onMounted(load)
 }
 
 .chart-label {
-  font-size: 9px;
+  font-size: 12px;
   color: var(--faint);
 }
 
@@ -629,7 +629,7 @@ onMounted(load)
   justify-content: center;
   gap: 8px;
   padding: 40px;
-  font-size: 12px;
+  font-size: 14.5px;
   color: var(--muted);
 }
 
@@ -654,7 +654,7 @@ onMounted(load)
 }
 
 .day-name {
-  font-size: 11.5px;
+  font-size: 14px;
   font-weight: 650;
   text-transform: capitalize;
   color: var(--ink-soft);
@@ -669,7 +669,7 @@ onMounted(load)
   border-radius: 999px;
   background: var(--accent-soft);
   color: var(--accent);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 650;
 }
 
@@ -680,7 +680,7 @@ onMounted(load)
 }
 
 .day-total {
-  font-size: 11px;
+  font-size: 13.5px;
   font-weight: 650;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
@@ -707,7 +707,7 @@ onMounted(load)
   align-items: center;
   gap: 10px;
   padding: 0 15px;
-  font-size: 10px;
+  font-size: 12.5px;
   font-weight: 650;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -739,7 +739,7 @@ onMounted(load)
   gap: 10px;
   padding: 8px 14px;
   border-bottom: 1px solid var(--line);
-  font-size: 11.5px;
+  font-size: 14px;
 }
 
 .time-row:last-child {
@@ -755,7 +755,7 @@ onMounted(load)
   align-items: center;
   gap: 6px;
   color: var(--ink);
-  font-size: 11.5px;
+  font-size: 14px;
 }
 
 .time-issue-link:hover {
@@ -764,13 +764,13 @@ onMounted(load)
 }
 
 .time-issue-id {
-  font-size: 9.5px;
+  font-size: 12px;
   color: var(--faint);
   flex: none;
 }
 
 .time-activity {
-  font-size: 10px;
+  font-size: 12.5px;
   color: var(--muted);
   padding: 2px 6px;
   border-radius: 4px;
@@ -783,7 +783,7 @@ onMounted(load)
 }
 
 .time-comment {
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--faint);
   min-width: 0;
 }
@@ -823,7 +823,7 @@ onMounted(load)
 }
 
 .summary-number {
-  font-size: 31px;
+  font-size: 32px;
   font-weight: 650;
   letter-spacing: -0.045em;
   font-variant-numeric: tabular-nums;
@@ -832,7 +832,7 @@ onMounted(load)
 
 .summary-label {
   margin-top: 3px;
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--faint);
   text-transform: capitalize;
 }
@@ -848,7 +848,7 @@ onMounted(load)
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  font-size: 11px;
+  font-size: 13.5px;
 }
 
 .summary-row .strong {
@@ -877,7 +877,7 @@ onMounted(load)
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-size: 10.5px;
+  font-size: 13px;
   margin-bottom: 3px;
 }
 

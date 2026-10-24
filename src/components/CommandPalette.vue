@@ -333,7 +333,7 @@ onBeforeUnmount(() => window.clearTimeout(debounceTimer))
   border: 0;
   outline: none;
   background: transparent;
-  font-size: 15px;
+  font-size: 17px;
   color: var(--ink);
 }
 
@@ -349,7 +349,7 @@ onBeforeUnmount(() => window.clearTimeout(debounceTimer))
 
 .command-label {
   padding: 8px 10px 5px;
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 650;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -401,24 +401,24 @@ onBeforeUnmount(() => window.clearTimeout(debounceTimer))
   display: flex;
   align-items: baseline;
   gap: 7px;
-  font-size: 12.5px;
+  font-size: 15px;
   font-weight: 550;
 }
 
 .command-id {
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--faint);
   flex: none;
 }
 
 .command-item-sub {
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--faint);
 }
 
 .command-hint {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12.5px;
   color: var(--faint);
   flex: none;
 }
@@ -431,7 +431,7 @@ onBeforeUnmount(() => window.clearTimeout(debounceTimer))
 .command-empty {
   padding: 28px 16px;
   text-align: center;
-  font-size: 12.5px;
+  font-size: 15px;
   color: var(--muted);
 }
 
@@ -442,7 +442,7 @@ onBeforeUnmount(() => window.clearTimeout(debounceTimer))
   padding: 9px 16px;
   border-top: 1px solid var(--line);
   background: var(--surface-2);
-  font-size: 10px;
+  font-size: 12.5px;
   color: var(--faint);
 }
 

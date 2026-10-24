@@ -146,7 +146,7 @@ const assigneeName = computed(() => {
 }
 
 .row-id {
-  font-size: 11.5px;
+  font-size: 14px;
   color: var(--faint);
   font-weight: 500;
 }
@@ -179,7 +179,7 @@ const assigneeName = computed(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 15.5px;
   font-weight: 550;
   letter-spacing: -0.005em;
 }
@@ -192,7 +192,7 @@ const assigneeName = computed(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--faint);
   min-width: 0;
 }
@@ -226,7 +226,7 @@ const assigneeName = computed(() => {
   border-radius: 999px;
   background: var(--violet-soft);
   color: var(--violet);
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -263,7 +263,7 @@ const assigneeName = computed(() => {
 }
 
 .priority-text {
-  font-size: 11px;
+  font-size: 13.5px;
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -275,14 +275,14 @@ const assigneeName = computed(() => {
   align-items: center;
   gap: 7px;
   min-width: 0;
-  font-size: 11.5px;
+  font-size: 14px;
   color: var(--ink-soft);
 }
 
 .unassigned {
   color: var(--faint);
   font-style: italic;
-  font-size: 11px;
+  font-size: 13.5px;
 }
 
 .row-sprint {
@@ -293,11 +293,11 @@ const assigneeName = computed(() => {
 
 .row-empty {
   color: var(--faint);
-  font-size: 11px;
+  font-size: 13.5px;
 }
 
 .row-updated {
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--faint);
   white-space: nowrap;
   overflow: hidden;

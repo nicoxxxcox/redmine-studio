@@ -872,7 +872,7 @@ watch(() => refresh.issueVersion, () => load())
             v-if="favoritesModeActive && settings.favoriteUserIds.length"
             value="favorites"
           >
-            Utilisateurs favoris ({{ settings.favoriteUserIds.length }})
+            Assignés favoris
           </option>
           <option v-if="favoritesModeActive" value="all">Toute l'équipe</option>
           <option v-else value="">Toute l'équipe</option>
@@ -1314,7 +1314,7 @@ watch(() => refresh.issueVersion, () => load())
 .filter-select {
   width: auto;
   min-width: 128px;
-  max-width: 180px;
+  max-width: 220px;
   flex: none;
 }
 
@@ -1344,7 +1344,7 @@ watch(() => refresh.issueVersion, () => load())
   border-radius: 999px;
   background: var(--accent);
   color: var(--accent-ink);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -1363,7 +1363,7 @@ watch(() => refresh.issueVersion, () => load())
   border-radius: 999px;
   background: var(--surface);
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 550;
   transition: all var(--transition);
 }
@@ -1447,7 +1447,7 @@ watch(() => refresh.issueVersion, () => load())
 .advanced-check {
   height: 36px;
   white-space: nowrap;
-  font-size: 11.5px;
+  font-size: 14px;
 }
 
 .issues-error {
@@ -1460,7 +1460,7 @@ watch(() => refresh.issueVersion, () => load())
   border-radius: var(--radius);
   background: var(--red-soft);
   color: var(--red);
-  font-size: 12px;
+  font-size: 14.5px;
 }
 
 .issues-error .btn {
@@ -1519,7 +1519,7 @@ watch(() => refresh.issueVersion, () => load())
 .board-toolbar-label {
   flex: none;
   color: var(--faint);
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 650;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1550,7 +1550,7 @@ watch(() => refresh.issueVersion, () => load())
   border-radius: 999px;
   background: var(--surface);
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 550;
   transition: all var(--transition);
 }
@@ -1581,7 +1581,7 @@ watch(() => refresh.issueVersion, () => load())
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .board-status-reset {
@@ -1592,7 +1592,7 @@ watch(() => refresh.issueVersion, () => load())
   border-radius: 5px;
   background: transparent;
   color: var(--accent);
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -1648,7 +1648,7 @@ watch(() => refresh.issueVersion, () => load())
 }
 
 .board-column-name {
-  font-size: 11.5px;
+  font-size: 14px;
   font-weight: 650;
   flex: 1;
   min-width: 0;
@@ -1667,7 +1667,7 @@ watch(() => refresh.issueVersion, () => load())
   border-radius: 999px;
   background: var(--surface-3);
   color: var(--muted);
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 650;
 }
 
@@ -1729,12 +1729,12 @@ watch(() => refresh.issueVersion, () => load())
 }
 
 .board-card-id {
-  font-size: 9.5px;
+  font-size: 12px;
   color: var(--faint);
 }
 
 .board-card-subject {
-  font-size: 12px;
+  font-size: 14.5px;
   font-weight: 550;
   line-height: 1.4;
   color: var(--ink);
@@ -1755,7 +1755,7 @@ watch(() => refresh.issueVersion, () => load())
   border-radius: 999px;
   background: var(--violet-soft);
   color: var(--violet);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1777,7 +1777,7 @@ watch(() => refresh.issueVersion, () => load())
   justify-content: space-between;
   gap: 8px;
   margin-top: 6px;
-  font-size: 9.5px;
+  font-size: 12px;
   color: var(--faint);
 }
 
@@ -1797,13 +1797,13 @@ watch(() => refresh.issueVersion, () => load())
 }
 
 .board-unassigned {
-  font-size: 9.5px;
+  font-size: 12px;
   color: var(--faint);
   font-style: italic;
 }
 
 .board-updated {
-  font-size: 9px;
+  font-size: 12px;
   color: var(--faint);
 }
 
@@ -1818,7 +1818,7 @@ watch(() => refresh.issueVersion, () => load())
   border-radius: 9px;
   background: transparent;
   color: var(--faint);
-  font-size: 10.5px;
+  font-size: 13px;
 }
 
 .board-empty:hover {
@@ -1829,7 +1829,7 @@ watch(() => refresh.issueVersion, () => load())
 
 .board-note {
   margin-top: 8px;
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--faint);
 }
 
