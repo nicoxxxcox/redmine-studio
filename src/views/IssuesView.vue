@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
+  Check,
   Columns3,
   Inbox,
   LayoutList,
@@ -20,15 +21,23 @@ import { useSessionStore } from '../stores/session.js'
 import { useToastStore } from '../stores/toast.js'
 import { useUiStore } from '../stores/ui.js'
 import { useRefreshStore } from '../stores/refresh.js'
-import { formatDate, isOverdue, issueSprint, relativeTime, toIsoDate } from '../lib/format.js'
+import {
+  addDays,
+  formatDate,
+  fullName,
+  isOverdue,
+  issueSprint,
+  relativeTime,
+  toIsoDate,
+} from '../lib/format.js'
 import { statusHue } from '../lib/constants.js'
 import { filterByFavorites, withSelectedOption } from '../lib/favorites.js'
 import IssueId from '../components/IssueId.vue'
 import IssueRow from '../components/IssueRow.vue'
+import AssigneeQuickSelect from '../components/AssigneeQuickSelect.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import SprintLink from '../components/SprintLink.vue'
 import PriorityBadge from '../components/PriorityBadge.vue'
-import UserAvatar from '../components/UserAvatar.vue'
 import EmptyState from '../components/EmptyState.vue'
 import ColumnResizer from '../components/ColumnResizer.vue'
 import { useColumnWidths } from '../composables/useColumnWidths.js'
@@ -132,6 +141,22 @@ const loadingMembers = ref(false)
 const dragging = ref(null)
 const dragOver = ref(null)
 const statusSaving = ref(new Set())
+const assigneeSaving = ref(new Set())
+const issueMembers = ref(new Map())
+const selectedIds = ref(new Set())
+const batch = reactive({ status: '', assignee: '', sprint: '' })
+const batchMembers = ref([])
+const batchSprints = ref([])
+const batchSprintField = ref('')
+const batchSprintProject = ref(null)
+const batchMemberProjectKey = ref('')
+const batchLoading = ref(false)
+const batchMembersLoading = ref(false)
+const batchApplying = ref(false)
+const batchProgress = ref({ done: 0, total: 0 })
+const projectSprintCache = new Map()
+const projectVersionCache = new Map()
+let batchMetaSequence = 0
 
 const favoriteUsers = computed(() =>
   filterByFavorites(session.userDirectory, settings.favoriteUserIds),
@@ -241,6 +266,48 @@ const hiddenBoardIssueCount = computed(() => {
   return issues.value.filter((issue) => !visible.has(issue.status?.id)).length
 })
 
+const selectedIssues = computed(() =>
+  issues.value.filter((issue) => selectedIds.value.has(issue.id)),
+)
+
+const selectedProjectIds = computed(() => [
+  ...new Set(selectedIssues.value.map((issue) => issue.project?.id).filter(Boolean)),
+])
+
+const selectedProjects = computed(() =>
+  selectedProjectIds.value.map(
+    (id) => session.projectById(id) || { id, name: `Projet #${id}` },
+  ),
+)
+
+const allVisibleSelected = computed(
+  () =>
+    issues.value.length > 0 &&
+    issues.value.every((issue) => selectedIds.value.has(issue.id)),
+)
+
+const someVisibleSelected = computed(
+  () =>
+    !allVisibleSelected.value &&
+    issues.value.some((issue) => selectedIds.value.has(issue.id)),
+)
+
+const batchSprintDisabled = computed(
+  () =>
+    selectedProjectIds.value.length !== 1 ||
+    !batchSprintField.value ||
+    batchLoading.value,
+)
+
+const batchSprintHint = computed(() => {
+  if (selectedProjectIds.value.length > 1) {
+    return 'Sélectionnez des tickets d’un même projet pour modifier le sprint.'
+  }
+  if (batchLoading.value) return 'Chargement des sprints…'
+  if (!batchSprintField.value) return 'Aucun sprint disponible pour ce projet.'
+  return ''
+})
+
 function statusDotStyle(status) {
   const hue = statusHue(status, session.statuses)
   return hue === null ? {} : { '--status-hue': hue }
@@ -340,7 +407,9 @@ function simpleApiParams(offset = 0) {
     author_id: filters.author_id || undefined,
     subject: !searchedIssueId.value && filters.subject ? `~${filters.subject}` : undefined,
     issue_id: searchedIssueId.value || undefined,
-    due_date: filters.overdue ? `<${toIsoDate()}` : undefined,
+    due_date: filters.overdue
+      ? `<=${toIsoDate(addDays(new Date(), -1))}`
+      : undefined,
     sort: filters.sort,
     limit: view.value === 'board' ? 100 : 50,
     offset,
@@ -419,7 +488,9 @@ function advancedApiParams(offset = 0) {
 
   if (searchedIssueId.value) add('issue_id', '=', [searchedIssueId.value])
   else if (filters.subject) add('subject', '~', [filters.subject])
-  if (filters.overdue) add('due_date', '<', [toIsoDate()])
+  if (filters.overdue) {
+    add('due_date', '<=', [toIsoDate(addDays(new Date(), -1))])
+  }
 
   const params = {
     sort: filters.sort,
@@ -451,6 +522,14 @@ async function load({ append = false } = {}) {
     const list = data?.issues || []
     issues.value = append ? [...issues.value, ...list] : list
     total.value = data?.total_count ?? list.length
+    if (!append) {
+      const visible = new Set(issues.value.map((issue) => issue.id))
+      const pruned = new Set(
+        [...selectedIds.value].filter((issueId) => visible.has(issueId)),
+      )
+      if (pruned.size !== selectedIds.value.size) selectedIds.value = pruned
+    }
+    loadIssueMembers(list)
     enrichSprints(list, offset, sequence)
   } catch (err) {
     if (sequence !== requestSequence) return
@@ -573,6 +652,14 @@ watch(
 )
 
 watch(
+  () => selectedIds.value,
+  () => {
+    loadBatchMeta()
+  },
+  { immediate: true },
+)
+
+watch(
   () => settings.hasFavorites,
   (hasFavorites) => {
     if (hasFavorites) return
@@ -686,6 +773,258 @@ function setStatusSaving(issueId, value) {
   if (value) next.add(issueId)
   else next.delete(issueId)
   statusSaving.value = next
+}
+
+function setAssigneeSaving(issueId, value) {
+  const next = new Set(assigneeSaving.value)
+  if (value) next.add(issueId)
+  else next.delete(issueId)
+  assigneeSaving.value = next
+}
+
+function issueAssigneeOptions(issue) {
+  const projectMembers = issue?.project?.id
+    ? issueMembers.value.get(issue.project.id)
+    : null
+  const source = projectMembers?.length ? projectMembers : members.value
+  const current = issue?.assigned_to
+  if (current && !source.some((member) => member.id === current.id)) {
+    return [current, ...source]
+  }
+  return source
+}
+
+async function loadIssueMembers(list) {
+  const projectIds = [
+    ...new Set((list || []).map((issue) => issue.project?.id).filter(Boolean)),
+  ]
+  if (!projectIds.length) return
+  const results = await Promise.allSettled(
+    projectIds.map((projectId) => session.membersFor(projectId)),
+  )
+  const next = new Map(issueMembers.value)
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      next.set(projectIds[index], (result.value || []).filter((member) => !member.isGroup))
+    }
+  })
+  issueMembers.value = next
+}
+
+async function changeAssignee(issue, user) {
+  if (!issue || assigneeSaving.value.has(issue.id)) return
+  const previous = issue.assigned_to || null
+  if ((previous?.id ?? null) === (user?.id ?? null)) return
+
+  setAssigneeSaving(issue.id, true)
+  issue.assigned_to = user
+  try {
+    await settings.api.updateIssue(issue.id, { assigned_to_id: user?.id ?? null })
+    toast.success(
+      user
+        ? `Ticket #${issue.id} assigné à ${fullName(user)}.`
+        : `Ticket #${issue.id} n’est plus assigné.`,
+    )
+    refresh.bumpIssue()
+  } catch (err) {
+    issue.assigned_to = previous
+    toast.error(err?.message || 'Le changement d’assigné a été refusé.')
+  } finally {
+    setAssigneeSaving(issue.id, false)
+  }
+}
+
+function toggleIssueSelection(issue) {
+  if (!issue) return
+  const next = new Set(selectedIds.value)
+  if (next.has(issue.id)) next.delete(issue.id)
+  else next.add(issue.id)
+  selectedIds.value = next
+}
+
+function toggleSelectAll() {
+  const next = new Set(selectedIds.value)
+  if (allVisibleSelected.value) {
+    for (const issue of issues.value) next.delete(issue.id)
+  } else {
+    for (const issue of issues.value) next.add(issue.id)
+  }
+  selectedIds.value = next
+}
+
+function clearSelection() {
+  selectedIds.value = new Set()
+}
+
+async function loadBatchMeta() {
+  const sequence = ++batchMetaSequence
+  const selected = selectedIssues.value
+  if (!selected.length) {
+    batchMembers.value = []
+    batchSprints.value = []
+    batchSprintField.value = ''
+    batchSprintProject.value = null
+    batchMemberProjectKey.value = ''
+    batch.status = ''
+    batch.assignee = ''
+    batch.sprint = ''
+    batchLoading.value = false
+    batchMembersLoading.value = false
+    return
+  }
+
+  batchLoading.value = true
+  batchMembersLoading.value = true
+  const projectIds = selectedProjectIds.value
+
+  // Les membres et les sprints dépendent des projets : on efface les choix
+  // devenus incompatibles dès le changement de sélection, avant le chargement.
+  const assigneeProjectKey = projectIds
+    .slice()
+    .sort((a, b) => a - b)
+    .join(',')
+  if (assigneeProjectKey !== batchMemberProjectKey.value) {
+    batch.assignee = ''
+    batchMemberProjectKey.value = assigneeProjectKey
+  }
+
+  const sprintProject = projectIds.length === 1 ? projectIds[0] : null
+  if (sprintProject !== batchSprintProject.value) {
+    batch.sprint = ''
+    batchSprints.value = []
+    batchSprintField.value = ''
+    batchSprintProject.value = sprintProject
+  }
+
+  try {
+    const memberResults = await Promise.allSettled(
+      projectIds.map((projectId) => session.membersFor(projectId)),
+    )
+    if (sequence !== batchMetaSequence) return
+
+    const members = []
+    const seen = new Set()
+    for (const result of memberResults) {
+      if (result.status !== 'fulfilled') continue
+      for (const member of result.value || []) {
+        if (!member?.id || member.isGroup || seen.has(member.id)) continue
+        seen.add(member.id)
+        members.push(member)
+      }
+    }
+    for (const issue of selected) {
+      const user = issue.assigned_to
+      if (user?.id && !seen.has(user.id)) {
+        seen.add(user.id)
+        members.push(user)
+      }
+    }
+    members.sort((a, b) => fullName(a).localeCompare(fullName(b), 'fr'))
+    batchMembers.value = members
+    batchMembersLoading.value = false
+
+    if (projectIds.length !== 1) return
+
+    const projectId = projectIds[0]
+    let sprints = projectSprintCache.get(projectId)
+    if (sprints === undefined) {
+      try {
+        const data = await settings.api.projectSprints(projectId)
+        sprints = data?.sprints || []
+        projectSprintCache.set(projectId, sprints)
+      } catch {
+        sprints = []
+      }
+    }
+    if (sequence !== batchMetaSequence) return
+
+    if (sprints.length) {
+      batchSprints.value = sprints
+      batchSprintField.value = 'sprint_id'
+      return
+    }
+
+    let versions = projectVersionCache.get(projectId)
+    if (versions === undefined) {
+      try {
+        const data = await settings.api.projectVersions(projectId)
+        versions = data?.versions || []
+        projectVersionCache.set(projectId, versions)
+      } catch {
+        versions = []
+      }
+    }
+    if (sequence !== batchMetaSequence) return
+
+    batchSprints.value = versions
+    batchSprintField.value = versions.length ? 'fixed_version_id' : ''
+    if (!versions.length) batch.sprint = ''
+  } finally {
+    if (sequence === batchMetaSequence) {
+      batchLoading.value = false
+      batchMembersLoading.value = false
+    }
+  }
+}
+
+async function applyBatch() {
+  const selected = selectedIssues.value
+  if (!selected.length || batchApplying.value) return
+
+  const patch = {}
+  if (batch.status) patch.status_id = Number(batch.status)
+  if (batch.assignee === 'none') patch.assigned_to_id = null
+  else if (batch.assignee) patch.assigned_to_id = Number(batch.assignee)
+  if (batch.sprint && batchSprintField.value) {
+    patch[batchSprintField.value] =
+      batch.sprint === 'none' ? null : Number(batch.sprint)
+  }
+
+  if (!Object.keys(patch).length) {
+    toast.info('Choisissez au moins une propriété à modifier.')
+    return
+  }
+
+  batchApplying.value = true
+  batchProgress.value = { done: 0, total: selected.length }
+  const failed = []
+  let success = 0
+
+  for (const issue of selected) {
+    try {
+      await settings.api.updateIssue(issue.id, patch)
+      success += 1
+    } catch (err) {
+      failed.push({ issue, error: err })
+    }
+    batchProgress.value = {
+      done: batchProgress.value.done + 1,
+      total: selected.length,
+    }
+  }
+
+  batchApplying.value = false
+  if (success) {
+    toast.success(
+      success > 1 ? `${success} tickets mis à jour.` : 'Ticket mis à jour.',
+    )
+  }
+  if (failed.length) {
+    toast.error(
+      `${failed.length} ticket${failed.length > 1 ? 's' : ''} non mis à jour. ${
+        failed[0].error?.message || ''
+      }`,
+    )
+  }
+
+  selectedIds.value = new Set(failed.map(({ issue }) => issue.id))
+  if (!failed.length) {
+    batch.status = ''
+    batch.assignee = ''
+    batch.sprint = ''
+  }
+  await load()
+  if (success) refresh.bumpIssue()
 }
 
 async function changeStatus(issue, status) {
@@ -1024,6 +1363,77 @@ watch(() => refresh.issueVersion, () => load())
       </Transition>
     </section>
 
+    <section v-if="selectedIds.size" class="batch-bar card" aria-label="Modification par lot">
+      <div class="batch-count">
+        <strong>{{ selectedIds.size }}</strong>
+        ticket{{ selectedIds.size > 1 ? 's' : '' }} sélectionné{{ selectedIds.size > 1 ? 's' : '' }}
+      </div>
+
+      <select
+        v-model="batch.status"
+        class="select batch-select"
+        aria-label="Nouveau statut"
+        :disabled="batchApplying"
+      >
+        <option value="">Statut : ne pas modifier</option>
+        <option v-for="status in session.statuses" :key="status.id" :value="String(status.id)">
+          {{ status.name }}
+        </option>
+      </select>
+
+      <select
+        v-model="batch.assignee"
+        class="select batch-select"
+        aria-label="Nouvel assigné"
+        :disabled="batchMembersLoading || batchApplying"
+      >
+        <option value="">
+          {{ batchMembersLoading ? 'Assigné : chargement…' : 'Assigné : ne pas modifier' }}
+        </option>
+        <option value="none">Non assigné</option>
+        <option v-for="member in batchMembers" :key="member.id" :value="String(member.id)">
+          {{ fullName(member) }}
+        </option>
+      </select>
+
+      <select
+        v-model="batch.sprint"
+        class="select batch-select"
+        aria-label="Nouveau sprint"
+        :disabled="batchSprintDisabled || batchApplying"
+        :title="batchSprintHint || 'Modifier le sprint des tickets sélectionnés'"
+      >
+        <option value="">
+          {{ batchLoading ? 'Sprint : chargement…' : 'Sprint : ne pas modifier' }}
+        </option>
+        <option v-if="batchSprintField" value="none">
+          {{ batchSprintField === 'sprint_id' ? 'Retirer du sprint' : 'Aucun sprint' }}
+        </option>
+        <option v-for="sprint in batchSprints" :key="sprint.id" :value="String(sprint.id)">
+          {{ sprint.name }}
+        </option>
+      </select>
+
+      <span v-if="batchSprintHint" class="batch-hint">{{ batchSprintHint }}</span>
+      <span v-if="batchApplying" class="batch-progress">
+        {{ batchProgress.done }}/{{ batchProgress.total }}
+      </span>
+
+      <button
+        class="btn btn-primary btn-sm batch-apply"
+        type="button"
+        :disabled="batchApplying"
+        @click="applyBatch"
+      >
+        <Loader2 v-if="batchApplying" :size="13" class="spin" />
+        <Check v-else :size="13" />
+        Appliquer
+      </button>
+      <button class="btn btn-sm" type="button" :disabled="batchApplying" @click="clearSelection">
+        <X :size="13" /> Annuler
+      </button>
+    </section>
+
     <div v-if="error" class="issues-error">
       <span>{{ error }}</span>
       <button class="btn btn-sm" type="button" @click="load()">
@@ -1038,7 +1448,16 @@ watch(() => refresh.issueVersion, () => load())
         :style="columnsStyle"
       >
         <div ref="listHead" class="issue-table-head issues-grid">
-          <span>
+          <span class="col-select">
+            <input
+              class="row-checkbox"
+              type="checkbox"
+              :checked="allVisibleSelected"
+              :indeterminate="someVisibleSelected"
+              aria-label="Sélectionner tous les tickets affichés"
+              title="Sélectionner tous les tickets affichés"
+              @change="toggleSelectAll"
+            />
             N°
             <ColumnResizer
               label="Ajuster la colonne N°"
@@ -1113,8 +1532,14 @@ watch(() => refresh.issueVersion, () => load())
             :key="issue.id"
             :issue="issue"
             :status-busy="statusSaving.has(issue.id)"
+            :assignee-busy="assigneeSaving.has(issue.id)"
+            :assignee-options="issueAssigneeOptions(issue)"
+            :selectable="true"
+            :selected="selectedIds.has(issue.id)"
             :subject-link-only="filters.assigned_to_id === 'me'"
             @change-status="changeStatus(issue, $event)"
+            @change-assignee="changeAssignee(issue, $event)"
+            @toggle-select="toggleIssueSelection(issue)"
           />
         </template>
 
@@ -1205,7 +1630,11 @@ watch(() => refresh.issueVersion, () => load())
               v-for="issue in issuesForStatus(status.id)"
               :key="issue.id"
               class="board-card"
-              :class="{ 'is-dragging': dragging?.id === issue.id, 'is-overdue': isOverdue(issue) }"
+              :class="{
+                'is-dragging': dragging?.id === issue.id,
+                'is-overdue': isOverdue(issue),
+                'is-selected': selectedIds.has(issue.id),
+              }"
               draggable="true"
               tabindex="0"
               @dragstart="onDragStart(issue, $event)"
@@ -1214,7 +1643,18 @@ watch(() => refresh.issueVersion, () => load())
               @keydown.enter="router.push({ name: 'issue', params: { id: issue.id } })"
             >
               <div class="board-card-top">
-                <IssueId :id="issue.id" class="board-card-id" />
+                <span class="board-card-top-left">
+                  <input
+                    class="row-checkbox board-card-checkbox"
+                    type="checkbox"
+                    :checked="selectedIds.has(issue.id)"
+                    :aria-label="`Sélectionner le ticket #${issue.id}`"
+                    @click.stop
+                    @mousedown.stop
+                    @change="toggleIssueSelection(issue)"
+                  />
+                  <IssueId :id="issue.id" class="board-card-id" />
+                </span>
                 <PriorityBadge :priority="issue.priority" :show-label="false" />
               </div>
               <p class="board-card-subject">{{ issue.subject }}</p>
@@ -1232,8 +1672,14 @@ watch(() => refresh.issueVersion, () => load())
                 </span>
               </div>
               <div class="board-card-foot">
-                <UserAvatar v-if="issue.assigned_to" :user="issue.assigned_to" :size="21" />
-                <span v-else class="board-unassigned">Non assigné</span>
+                <AssigneeQuickSelect
+                  class="board-assignee"
+                  :issue="issue"
+                  :options="issueAssigneeOptions(issue)"
+                  :busy="assigneeSaving.has(issue.id)"
+                  compact
+                  @change="changeAssignee(issue, $event)"
+                />
                 <span class="board-updated">{{ relativeTime(issue.updated_on) }}</span>
               </div>
             </article>
@@ -1448,6 +1894,67 @@ watch(() => refresh.issueVersion, () => load())
   height: 36px;
   white-space: nowrap;
   font-size: 14px;
+}
+
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
+  background: color-mix(in srgb, var(--accent-soft) 62%, var(--surface));
+}
+
+.batch-count {
+  flex: none;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.batch-count strong {
+  color: var(--accent);
+}
+
+.batch-select {
+  width: auto;
+  min-width: 168px;
+  max-width: 230px;
+  flex: none;
+}
+
+.batch-hint {
+  flex: 1 1 220px;
+  min-width: 160px;
+  color: var(--faint);
+  font-size: 12.5px;
+}
+
+.batch-progress {
+  flex: none;
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.batch-apply {
+  margin-left: auto;
+}
+
+.row-checkbox {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.col-select {
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
 
 .issues-error {
@@ -1720,12 +2227,34 @@ watch(() => refresh.issueVersion, () => load())
   box-shadow: inset 2px 0 0 var(--red), var(--shadow-xs);
 }
 
+.board-card.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow-sm);
+}
+
 .board-card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 4px;
+}
+
+.board-card-top-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.board-card-checkbox {
+  opacity: 0.55;
+}
+
+.board-card:hover .board-card-checkbox,
+.board-card-checkbox:checked,
+.board-card-checkbox:focus-visible {
+  opacity: 1;
 }
 
 .board-card-id {
@@ -1796,10 +2325,11 @@ watch(() => refresh.issueVersion, () => load())
   border-top: 1px solid var(--line);
 }
 
-.board-unassigned {
+.board-assignee {
+  min-width: 0;
+  max-width: 170px;
   font-size: 12px;
-  color: var(--faint);
-  font-style: italic;
+  color: var(--muted);
 }
 
 .board-updated {

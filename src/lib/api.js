@@ -349,6 +349,40 @@ export class RedmineApi {
     })
   }
 
+  /**
+   * Sprints du plugin Scrum (Ociotec). L'endpoint REST du plugin n'accepte
+   * pas toujours l'authentification par clé API (401) : on lit d'abord les
+   * valeurs du filtre « Sprint » de la liste HTML, puis l'API en repli.
+   */
+  async projectSprints(projectId) {
+    try {
+      const { text } = await this.textRequest('/issues', {
+        query: {
+          project_id: projectId,
+          set_filter: 1,
+          status_id: '*',
+          'c[]': ['id', 'sprint'],
+          per_page: 1,
+        },
+        headers: { Accept: 'text/html,application/xhtml+xml' },
+      })
+      const sprints = parseSprintFilterOptions(text)
+      if (sprints.length) return { sprints }
+    } catch {
+      /* Liste HTML indisponible : on tente l'endpoint du plugin. */
+    }
+
+    try {
+      const data = await this.request(`/projects/${projectId}/sprints.json`, {
+        query: { limit: 100 },
+      })
+      if (Array.isArray(data?.sprints) && data.sprints.length) return data
+    } catch {
+      /* Plugin absent ou authentification API refusée. */
+    }
+    return { sprints: [] }
+  }
+
   timeEntries(params = {}) {
     return this.request('/time_entries.json', { query: params })
   }
@@ -476,6 +510,69 @@ function parseIssueSprint(html) {
   const doc = parseHtmlDocument(html)
   if (!doc) return null
   return sprintFromAnchor(doc.querySelector('div.sprint.attribute a, td.sprint a'))
+}
+
+/**
+ * Extrait les valeurs du filtre « Sprint » embarquées par Redmine dans la
+ * liste HTML des tickets. Les pages du plugin Scrum exigent une session web,
+ * mais la liste standard accepte la clé API et expose toutes les options.
+ */
+function parseSprintFilterOptions(html) {
+  const text = String(html || '')
+  const marker = /"sprint_id"\s*:\s*\{/.exec(text)
+  if (!marker) return []
+
+  const start = text.indexOf('{', marker.index)
+  if (start < 0) return []
+
+  let depth = 0
+  let inString = false
+  let escaped = false
+  let end = -1
+  for (let index = start; index < text.length; index += 1) {
+    const char = text[index]
+    if (inString) {
+      if (escaped) escaped = false
+      else if (char === '\\') escaped = true
+      else if (char === '"') inString = false
+      continue
+    }
+    if (char === '"') {
+      inString = true
+      continue
+    }
+    if (char === '{') depth += 1
+    else if (char === '}') {
+      depth -= 1
+      if (depth === 0) {
+        end = index
+        break
+      }
+    }
+  }
+  if (end < 0) return []
+
+  let filter
+  try {
+    filter = JSON.parse(text.slice(start, end + 1))
+  } catch {
+    return []
+  }
+
+  const sprints = new Map()
+  for (const value of Array.isArray(filter?.values) ? filter.values : []) {
+    if (!Array.isArray(value)) continue
+    const [name, rawId] = value
+    const id = Number(rawId)
+    if (!id || !name) continue
+    sprints.set(id, {
+      id,
+      name: String(name).replace(/\s+/g, ' ').trim(),
+    })
+  }
+  return [...sprints.values()].sort((a, b) =>
+    a.name.localeCompare(b.name, 'fr', { numeric: true }),
+  )
 }
 
 function extractAuthenticityToken(source = '') {

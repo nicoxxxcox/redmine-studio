@@ -30,6 +30,7 @@ const props = defineProps({
   compact: { type: Boolean, default: false },
   users: { type: Array, default: () => [] },
   resolveUser: { type: Function, default: null },
+  pasteImages: { type: Function, default: null },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -178,6 +179,116 @@ function focusEditor() {
 function focus() {
   if (isSource.value) source.value?.focus()
   else editor.value?.focus()
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function insertIntoSource(text) {
+  const element = source.value
+  if (!element || !text) return
+  const start = element.selectionStart ?? element.value.length
+  const end = element.selectionEnd ?? start
+  element.value = element.value.slice(0, start) + text + element.value.slice(end)
+  element.selectionStart = start + text.length
+  element.selectionEnd = start + text.length
+  onSourceInput({ target: element })
+}
+
+function editorSelectionRange() {
+  if (!editor.value) return null
+  const selection = window.getSelection()
+  if (!selection || !selection.rangeCount) return null
+  const range = selection.getRangeAt(0)
+  if (!editor.value.contains(range.commonAncestorContainer)) return null
+  return range
+}
+
+function createImageReference(filename) {
+  const chip = document.createElement('span')
+  chip.className = 'rt-image-ref'
+  chip.dataset.filename = filename
+  chip.contentEditable = 'false'
+  chip.title = `Image jointe : ${filename}`
+  chip.textContent = `Image : ${filename}`
+  return chip
+}
+
+function normalizeImageReferences(value) {
+  if (!value) return []
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item ?? '').trim()).filter(Boolean)
+  }
+  const text = String(value).trim()
+  if (!text) return []
+  const references = [...text.matchAll(/!([^!\n]+)!/g)].map((match) => match[1].trim())
+  return references.length ? references : [text]
+}
+
+function insertImageReferences(value) {
+  if (props.disabled) return
+  const filenames = normalizeImageReferences(value)
+  if (!filenames.length) return
+
+  if (isSource.value) {
+    insertIntoSource(filenames.map((filename) => `!${filename}!`).join('\n'))
+    return
+  }
+
+  focusEditor()
+  const selection = window.getSelection()
+  let range = editorSelectionRange()
+  if (!range) {
+    range = document.createRange()
+    range.selectNodeContents(editor.value)
+    range.collapse(false)
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+  }
+
+  range.deleteContents()
+  const fragment = document.createDocumentFragment()
+  let lastNode = null
+  filenames.forEach((filename, index) => {
+    if (index) {
+      lastNode = document.createElement('br')
+      fragment.appendChild(lastNode)
+    }
+    lastNode = createImageReference(filename)
+    fragment.appendChild(lastNode)
+  })
+  lastNode = document.createTextNode('\u00a0')
+  fragment.appendChild(lastNode)
+  range.insertNode(fragment)
+
+  const caret = document.createRange()
+  caret.setStartAfter(lastNode)
+  caret.collapse(true)
+  selection?.removeAllRanges()
+  selection?.addRange(caret)
+  sync()
+  refreshActive()
+}
+
+function removeImageReference(filename) {
+  if (!filename || props.disabled) return
+  if (isSource.value) {
+    const next = String(source.value?.value || '').replace(
+      new RegExp(`!${escapeRegExp(filename)}!`, 'g'),
+      '',
+    )
+    if (source.value) source.value.value = next
+    onSourceInput({ target: { value: next } })
+    return
+  }
+  if (!editor.value) return
+  const chips = Array.from(editor.value.querySelectorAll('.rt-image-ref')).filter(
+    (element) => element.getAttribute('data-filename') === filename,
+  )
+  if (!chips.length) return
+  for (const chip of chips) chip.remove()
+  sync()
 }
 
 function run(command, value = null) {
@@ -478,20 +589,30 @@ function onSourceInput(event) {
   })
 }
 
+function pasteClipboardImages(event) {
+  const data = event.clipboardData
+  if (!data) return false
+  const hasFiles = Array.from(data.items || []).some((item) => item.kind === 'file')
+  if (!hasFiles) return false
+
+  event.preventDefault()
+  if (!props.pasteImages) return true
+  let references = null
+  try {
+    references = props.pasteImages(event)
+  } catch {
+    references = null
+  }
+  if (references) insertImageReferences(references)
+  return true
+}
+
 function onPaste(event) {
   if (props.disabled) return
   closeMention()
-  const data = event.clipboardData
-  if (!data) return
+  if (pasteClipboardImages(event)) return
 
-  const hasFiles = Array.from(data.items || []).some((item) => item.kind === 'file')
-  if (hasFiles) {
-    // Les images sont gérées par le composeur parent (pièces jointes).
-    event.preventDefault()
-    return
-  }
-
-  const text = data.getData('text/plain')
+  const text = event.clipboardData?.getData('text/plain')
   if (!text) return
   event.preventDefault()
   focusEditor()
@@ -499,7 +620,12 @@ function onPaste(event) {
   sync()
 }
 
-defineExpose({ focus })
+function onSourcePaste(event) {
+  if (props.disabled) return
+  pasteClipboardImages(event)
+}
+
+defineExpose({ focus, insertImageReferences, removeImageReference })
 </script>
 
 <template>
@@ -578,6 +704,7 @@ defineExpose({ focus })
       :disabled="disabled"
       spellcheck="false"
       @input="onSourceInput"
+      @paste="onSourcePaste"
     ></textarea>
 
     <Teleport to="body">

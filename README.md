@@ -12,19 +12,26 @@ toutes les requêtes passent par le petit proxy same-origin intégré à l'appli
 - **Tableau de bord** : tickets assignés, retards, tickets créés, temps de la semaine, activité
   récente.
 - **Tickets** : liste filtrable (projet, statut, assigné, priorité, tracker, auteur, retard,
-  recherche), changement de statut rapide depuis chaque ligne, numéro copiable en un clic, une
-  couleur distincte par statut, sprint (plugin Scrum, sinon version cible) visible dans la liste,
-  le kanban et le détail, tableau kanban avec changement de statut par glisser-déposer et
-  filtrage des colonnes de statut affichées.
-- **Détail d'un ticket** : changement de statut rapide dans l'en-tête, sujet et description
-  éditables avec un éditeur enrichi (gras, italique, titres, listes, citations, code, liens et
-  bascule vers la source Textile), propriétés (statut, priorité, assigné, tracker, version, dates,
-  estimation, avancement), suivi (watchers), relations et sous-tickets, pièces jointes avec
-  aperçu des images (SVG compris) et visionneuse plein écran.
+  recherche), changement de statut et d'assigné rapide depuis chaque ligne, le kanban et le
+  tableau de bord, numéro copiable en un clic, une couleur distincte par statut, sprint (plugin
+  Scrum, sinon version cible) visible dans la liste, le kanban et le détail, tableau kanban avec
+  changement de statut par glisser-déposer et filtrage des colonnes de statut affichées.
+- **Édition par lot** : sélection par cases à cocher dans la liste et le kanban, puis modification
+  groupée du statut, de l'assigné et du sprint. Le changement de sprint est limité à une sélection
+  dans un même projet, car les identifiants de sprint sont propres au projet.
+- **Détail d'un ticket** : changement de statut et d'assigné rapide dans l'en-tête, sujet et
+  description éditables avec un éditeur enrichi (gras, italique, titres, listes, citations, code,
+  liens et bascule vers la source Textile), propriétés (statut, priorité, assigné, tracker,
+  version, dates, estimation, avancement), suivi (watchers), relations et sous-tickets, pièces
+  jointes avec aperçu des images (SVG compris) et visionneuse plein écran.
 - **Discussion** : commentaires triables et repliables (les plus récents d'abord, les 3 derniers
   ouverts par défaut), historique des modifications compact, rédaction et édition des notes avec
-  un éditeur enrichi, notes privées, pièces jointes visibles sous chaque commentaire, collage
-  d'une image du presse-papiers (`Ctrl+V` / `⌘+V`) et brouillons conservés localement.
+  un éditeur enrichi, notes privées, pièces jointes visibles sous chaque commentaire et brouillons
+  conservés localement.
+- **Collage d'images** : `Ctrl+V` / `⌘+V` dans la description d'un ticket, l'édition de
+  description ou un nouveau commentaire insère une référence compacte et joint l'image à
+  l'enregistrement. Redmine 3.4 ne permet pas d'ajouter une pièce jointe à un commentaire existant
+  lors de son édition ; un message invite alors à publier l'image dans un nouveau commentaire.
 - **Mentions `@`** : autocomplétion avec recherche dans les descriptions et les commentaires,
   suggestions classées par activité (ticket courant puis saisies de temps du projet), insertion
   au format Redmine `@login` et mise en évidence dans les contenus affichés.
@@ -135,9 +142,10 @@ fuite, le proxy ne transmet le cookie de session que lorsque Redmine est servi s
 d'hôte que l'application (les ports peuvent différer). Sur une instance distante, l'édition est
 refusée avec un message explicite ; les autres fonctions restent disponibles avec la clé API.
 
-Le collage d'une image s'effectue dans le composeur de nouveau commentaire. Redmine 3.4 ne
-permet pas d'ajouter une pièce jointe à un journal existant : lors de l'édition d'une note, un
-message invite à publier l'image dans un nouveau commentaire.
+Le collage d'une image s'effectue dans le composeur de nouveau commentaire, la description d'un
+ticket ou le formulaire de création. Redmine 3.4 ne permet pas d'ajouter une pièce jointe à un
+journal existant : lors de l'édition d'une note, un message invite à publier l'image dans un
+nouveau commentaire.
 
 ## Certificats et réseau
 
@@ -183,6 +191,7 @@ Les raccourcis sont désactivés pendant la saisie dans un champ.
     ├── lib/
     │   ├── api.js          # Client REST Redmine
     │   ├── format.js       # Dates, durées, rendu Textile/Markdown
+    │   ├── pastedImages.js # Images du presse-papiers et références de brouillon
     │   ├── constants.js    # Tons de statuts, priorités, avatars
     │   └── theme.js        # Thème clair/sombre/système
     ├── stores/             # Pinia : session, réglages, UI, temps, notifications
@@ -199,8 +208,13 @@ Les raccourcis sont désactivés pendant la saisie dans un champ.
 - Les watchers, relations, sous-tickets et pièces jointes sont pris en charge.
 - Le sprint du plugin **Scrum** (`issues.sprint_id`) n'est pas exposé par l'API REST de
   Redmine 3.4. Redmine Studio le lit dans les pages HTML de la liste et du ticket, authentifiées
-  par la clé API, puis l'associe aux tickets. Sans sprint Scrum, la version cible
-  (`fixed_version`) reste utilisée comme libellé de repli.
+  par la clé API, puis l'associe aux tickets. Pour l'édition par lot, les sprints disponibles
+  sont extraits des valeurs du filtre « Sprint » de la liste HTML (l'endpoint REST du plugin
+  exige une session web) et enregistrés via `sprint_id`. Sans sprint Scrum, la version cible
+  (`fixed_version`) reste utilisée comme libellé et champ de repli.
+- Le collage d'images joint les fichiers via `/uploads.json` puis les référence en Textile
+  (`!fichier!`) dans la description ou la note. Les fichiers collés ne sont pas conservés dans
+  les brouillons locaux : recollez-les après un rechargement de la page.
 - Les champs personnalisés ne sont pas encore éditables.
 - Le rendu Textile/Markdown est volontairement léger : titres, listes, citations, gras, italique,
   code, liens, références `#123`. Il ne remplace pas le rendu complet de Redmine (tableaux,

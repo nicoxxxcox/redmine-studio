@@ -13,18 +13,22 @@ import {
 import IssueId from './IssueId.vue'
 import StatusBadge from './StatusBadge.vue'
 import StatusQuickSelect from './StatusQuickSelect.vue'
+import AssigneeQuickSelect from './AssigneeQuickSelect.vue'
 import SprintLink from './SprintLink.vue'
 import PriorityBadge from './PriorityBadge.vue'
-import UserAvatar from './UserAvatar.vue'
 
 const props = defineProps({
   issue: { type: Object, required: true },
   compact: { type: Boolean, default: false },
   statusBusy: { type: Boolean, default: false },
+  assigneeBusy: { type: Boolean, default: false },
+  assigneeOptions: { type: Array, default: () => [] },
+  selectable: { type: Boolean, default: false },
+  selected: { type: Boolean, default: false },
   subjectLinkOnly: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['change-status'])
+const emit = defineEmits(['change-status', 'change-assignee', 'toggle-select'])
 
 const overdue = computed(() => isOverdue(props.issue))
 const sprint = computed(() => issueSprint(props.issue))
@@ -44,9 +48,22 @@ const assigneeName = computed(() => {
       'is-overdue': overdue,
       'is-compact': compact,
       'is-subject-only': subjectLinkOnly,
+      'is-selected': selected,
     }"
   >
-    <IssueId :id="issue.id" class="row-id" />
+    <span class="row-select">
+      <input
+        v-if="selectable"
+        class="row-checkbox"
+        type="checkbox"
+        :checked="selected"
+        :aria-label="`Sélectionner le ticket #${issue.id}`"
+        @click.stop
+        @mousedown.stop
+        @change="emit('toggle-select', issue)"
+      />
+      <IssueId :id="issue.id" class="row-id" />
+    </span>
 
     <component
       :is="subjectLinkOnly ? RouterLink : 'span'"
@@ -89,11 +106,12 @@ const assigneeName = computed(() => {
     </span>
 
     <span class="row-assignee">
-      <template v-if="issue.assigned_to">
-        <UserAvatar :user="issue.assigned_to" :size="23" />
-        <span class="truncate">{{ assigneeName }}</span>
-      </template>
-      <span v-else class="unassigned">Non assigné</span>
+      <AssigneeQuickSelect
+        :issue="issue"
+        :options="assigneeOptions"
+        :busy="assigneeBusy"
+        @change="emit('change-assignee', $event)"
+      />
     </span>
 
     <span class="row-sprint">
@@ -132,6 +150,30 @@ const assigneeName = computed(() => {
 
 .issue-row.is-subject-only {
   cursor: default;
+}
+
+.issue-row.is-selected {
+  background: var(--accent-soft);
+}
+
+.issue-row.is-selected:hover {
+  background: color-mix(in srgb, var(--accent-soft) 78%, var(--surface-hover));
+}
+
+.row-select {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.row-checkbox {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 .issue-row.is-overdue::before {

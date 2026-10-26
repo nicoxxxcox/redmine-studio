@@ -230,7 +230,8 @@ export function plainText(value = '') {
     .trim()
 }
 
-const IMAGE_EXTENSION = /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i
+const IMAGE_EXTENSIONS = 'avif|bmp|gif|heic|heif|ico|jfif|jpe?g|png|svg|tiff?|webp'
+const IMAGE_EXTENSION = new RegExp(`\\.(?:${IMAGE_EXTENSIONS})$`, 'i')
 
 export function isImageAttachment(attachment) {
   const type = String(attachment?.content_type || '').toLowerCase()
@@ -469,6 +470,21 @@ export function renderRichText(source = '') {
 }
 
 function inline(text) {
+  // Les références d'image Textile `!image.png!` sont représentées par une
+  // puce compacte dans l'éditeur et dans le rendu (les vignettes réelles sont
+  // affichées dans la galerie de pièces jointes).
+  const images = []
+  text = text.replace(
+    new RegExp(`!([^!\\n]+?\\.(?:${IMAGE_EXTENSIONS})(?:\\?[^!\\n]*)?)!`, 'gi'),
+    (_, filename) => {
+      const index = images.length
+      images.push(
+        `<span class="rt-image-ref" contenteditable="false" data-filename="${filename}" title="Image jointe : ${filename}">Image : ${filename}</span>`,
+      )
+      return `\u0000IMAGE${index}\u0000`
+    },
+  )
+
   // Les mentions sont extraites avant le code Textile `@…@` : sans cela,
   // « @fanny @zakia » serait interprété comme un unique bloc de code.
   const mentions = []
@@ -490,5 +506,7 @@ function inline(text) {
     .replace(/(^|[\s(])_([^_\n]+)_/g, '$1<em>$2</em>')
     .replace(/~~([^~]+)~~/g, '<del>$1</del>')
 
-  return text.replace(/\u0000MENTION(\d+)\u0000/g, (_, index) => mentions[Number(index)] || '')
+  return text
+    .replace(/\u0000MENTION(\d+)\u0000/g, (_, index) => mentions[Number(index)] || '')
+    .replace(/\u0000IMAGE(\d+)\u0000/g, (_, index) => images[Number(index)] || '')
 }

@@ -74,6 +74,13 @@ export function inlineToTextile(node) {
       return wrap('~~', inner())
     case 'code':
       return wrap('@', inner().replace(/\n+/g, ' '))
+    case 'span': {
+      if (node.classList?.contains('rt-image-ref')) {
+        const filename = node.getAttribute('data-filename') || ''
+        return filename ? `!${filename}!` : ''
+      }
+      return inner()
+    }
     case 'a': {
       const href = node.getAttribute('href') || ''
       const label = inner()

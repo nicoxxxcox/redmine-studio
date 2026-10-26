@@ -51,8 +51,14 @@ import {
 } from '../lib/format.js'
 import { saveBlob, ApiError } from '../lib/api.js'
 import { copyText } from '../lib/clipboard.js'
+import {
+  clipboardImageFiles,
+  hasPastedImageReferences,
+  stripPastedImageReferences,
+} from '../lib/pastedImages.js'
 import IssueId from '../components/IssueId.vue'
 import StatusQuickSelect from '../components/StatusQuickSelect.vue'
+import AssigneeQuickSelect from '../components/AssigneeQuickSelect.vue'
 import SprintLink from '../components/SprintLink.vue'
 import PriorityBadge from '../components/PriorityBadge.vue'
 import UserAvatar from '../components/UserAvatar.vue'
@@ -89,6 +95,8 @@ const savingJournalId = ref(null)
 
 const editingDescription = ref(false)
 const descriptionDraft = ref('')
+const descriptionFiles = ref([])
+const descriptionEditor = ref(null)
 const savingDescription = ref(false)
 const editingSubject = ref(false)
 const subjectDraft = ref('')
@@ -484,10 +492,19 @@ function restoreDraft() {
   draftRestoredFor = issue.value.id
   try {
     const stored = JSON.parse(localStorage.getItem(draftKey.value) || 'null')
-    if (stored?.comment) {
-      comment.value = stored.comment
+    const draft = String(stored?.comment || '')
+    const restored = stripPastedImageReferences(draft)
+    if (hasPastedImageReferences(draft)) {
+      toast.info(
+        "Les images collées ne sont pas conservées dans un brouillon. Recollez-les avant d'envoyer.",
+      )
+    }
+    if (restored || stored?.privateNote) {
+      comment.value = restored
       privateNote.value = Boolean(stored.privateNote)
       draftSaved.value = true
+    } else if (draft) {
+      clearDraft()
     }
   } catch {
     /* brouillon illisible */
@@ -528,6 +545,7 @@ watch(issueId, () => {
   privateNote.value = false
   commentFiles.value = []
   editingDescription.value = false
+  descriptionFiles.value = []
   editingSubject.value = false
   imageViewerOpen.value = false
   imageViewerIndex.value = 0
@@ -570,11 +588,67 @@ async function saveSubject() {
   }
 }
 
+function startDescriptionEdit() {
+  descriptionDraft.value = issue.value?.description || ''
+  descriptionFiles.value = []
+  editingDescription.value = true
+}
+
+function cancelDescriptionEdit() {
+  editingDescription.value = false
+  descriptionDraft.value = issue.value?.description || ''
+  descriptionFiles.value = []
+}
+
+function addDescriptionFiles(files) {
+  const added = []
+  for (const file of files) {
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error(`« ${file.name} » dépasse 20 Mo.`)
+      continue
+    }
+    if (!descriptionFiles.value.some((item) => item.name === file.name && item.size === file.size)) {
+      descriptionFiles.value.push(file)
+      added.push(file)
+    }
+  }
+  return added
+}
+
+function pasteDescriptionImages(event) {
+  const images = clipboardImageFiles(event)
+  const added = addDescriptionFiles(images)
+  if (added.length) {
+    toast.success(
+      added.length > 1 ? `${added.length} images collées.` : 'Image collée dans la description.',
+    )
+  }
+  return added.map((file) => file.name)
+}
+
+function removeDescriptionFile(index) {
+  const [file] = descriptionFiles.value.splice(index, 1)
+  if (file) descriptionEditor.value?.removeImageReference(file.name)
+}
+
 async function saveDescription() {
   if (!issue.value) return
   savingDescription.value = true
   try {
-    await settings.api.updateIssue(issue.value.id, { description: descriptionDraft.value })
+    const uploads = []
+    for (const file of descriptionFiles.value) {
+      const upload = await settings.api.uploadFile(file)
+      uploads.push({
+        token: upload.token,
+        filename: file.name,
+        content_type: file.type || 'application/octet-stream',
+      })
+    }
+    await settings.api.updateIssue(issue.value.id, {
+      description: descriptionDraft.value,
+      ...(uploads.length ? { uploads } : {}),
+    })
+    descriptionFiles.value = []
     editingDescription.value = false
     toast.success('Description mise à jour.')
     await load({ silent: true })
@@ -639,7 +713,7 @@ async function toggleWatch() {
 }
 
 function addCommentFiles(files) {
-  let added = 0
+  const added = []
   for (const file of files) {
     if (file.size > 20 * 1024 * 1024) {
       toast.error(`« ${file.name} » dépasse 20 Mo.`)
@@ -647,7 +721,7 @@ function addCommentFiles(files) {
     }
     if (!commentFiles.value.some((item) => item.name === file.name && item.size === file.size)) {
       commentFiles.value.push(file)
-      added += 1
+      added.push(file)
     }
   }
   return added
@@ -658,59 +732,19 @@ function onCommentFiles(event) {
   event.target.value = ''
 }
 
-function clipboardImages(event) {
-  const data = event.clipboardData
-  if (!data) return []
-  const items = Array.from(data.items || [])
-    .filter((item) => item.kind === 'file' && item.type?.startsWith('image/'))
-    .map((item) => item.getAsFile())
-    .filter(Boolean)
-  const files = items.length
-    ? items
-    : Array.from(data.files || []).filter((file) => file.type?.startsWith('image/'))
-  return files.map((file, index) => {
-    const type = file.type || 'image/png'
-    return new File([file], pastedImageName(type, index), {
-      type,
-      lastModified: Date.now(),
-    })
-  })
-}
-
-function pastedImageName(type, index) {
-  const now = new Date()
-  const stamp = [
-    now.getFullYear(),
-    String(now.getMonth() + 1).padStart(2, '0'),
-    String(now.getDate()).padStart(2, '0'),
-    '-',
-    String(now.getHours()).padStart(2, '0'),
-    String(now.getMinutes()).padStart(2, '0'),
-    String(now.getSeconds()).padStart(2, '0'),
-    String(now.getMilliseconds()).padStart(3, '0'),
-  ].join('')
-  const subtype = (type.split('/')[1] || 'png').toLowerCase()
-  const extension =
-    subtype === 'jpeg'
-      ? 'jpg'
-      : subtype === 'svg+xml'
-        ? 'svg'
-        : subtype.replace(/[^a-z0-9]/g, '')
-  return `image-collee-${stamp}${index ? `-${index + 1}` : ''}.${extension || 'png'}`
-}
-
-function onCommentPaste(event) {
-  const files = clipboardImages(event)
-  if (!files.length) return
-  event.preventDefault()
-  const added = addCommentFiles(files)
-  if (added) {
-    toast.success(added > 1 ? `${added} images collées.` : 'Image collée dans le commentaire.')
+function pasteCommentImages(event) {
+  const images = clipboardImageFiles(event)
+  const added = addCommentFiles(images)
+  if (added.length) {
+    toast.success(
+      added.length > 1 ? `${added.length} images collées.` : 'Image collée dans le commentaire.',
+    )
   }
+  return added.map((file) => file.name)
 }
 
 function onJournalPaste(event) {
-  if (!clipboardImages(event).length) return
+  if (!clipboardImageFiles(event).length) return
   event.preventDefault()
   toast.info(
     "Redmine 3.4 ne permet pas d'ajouter une image à un commentaire existant. Ajoutez-la dans un nouveau commentaire.",
@@ -718,7 +752,8 @@ function onJournalPaste(event) {
 }
 
 function removeCommentFile(index) {
-  commentFiles.value.splice(index, 1)
+  const [file] = commentFiles.value.splice(index, 1)
+  if (file) commentEditor.value?.removeImageReference(file.name)
 }
 
 async function uploadAttachments(event) {
@@ -829,6 +864,12 @@ function openTime(entry = null) {
 function quickChangeStatus(status) {
   if (!status || !issue.value || issue.value.status?.id === status.id) return
   patch('status_id', status.id)
+}
+
+function quickChangeAssignee(user) {
+  if (!issue.value) return
+  if ((issue.value.assigned_to?.id ?? null) === (user?.id ?? null)) return
+  patch('assigned_to_id', user?.id ?? null)
 }
 
 async function copyLink() {
@@ -1034,11 +1075,13 @@ onBeforeUnmount(() => {
           </h1>
 
           <div class="detail-meta">
-            <span v-if="issue.assigned_to" class="meta-item">
-              <UserAvatar :user="issue.assigned_to" :size="21" />
-              {{ [issue.assigned_to.firstname, issue.assigned_to.lastname].filter(Boolean).join(' ') || issue.assigned_to.name }}
-            </span>
-            <span v-else class="meta-item muted">Non assigné</span>
+            <AssigneeQuickSelect
+              class="meta-item"
+              :issue="issue"
+              :options="assigneeOptions"
+              :busy="updatingField === 'assigned_to_id'"
+              @change="quickChangeAssignee"
+            />
             <span v-if="issue.due_date" class="meta-item" :class="{ 'is-late': isOverdue(issue) }">
               <CalendarDays :size="13" /> {{ formatDate(issue.due_date) }}
             </span>
@@ -1117,7 +1160,7 @@ onBeforeUnmount(() => {
                   v-if="!editingDescription"
                   class="btn btn-ghost btn-sm"
                   type="button"
-                  @click="editingDescription = true; descriptionDraft = issue.description || ''"
+                  @click="startDescriptionEdit"
                 >
                   <Pencil :size="13" /> Modifier
                 </button>
@@ -1126,15 +1169,27 @@ onBeforeUnmount(() => {
             <div class="card-body">
               <template v-if="editingDescription">
                 <RichTextEditor
+                  ref="descriptionEditor"
                   v-model="descriptionDraft"
                   min-height="220px"
                   aria-label="Description du ticket"
-                  placeholder="Décrivez le ticket… (@ pour mentionner)"
+                  placeholder="Décrivez le ticket… (@ pour mentionner, Ctrl+V / Cmd+V pour coller une image)"
                   :users="mentionUsers"
                   :resolve-user="session.resolveUserDetails"
+                  :paste-images="pasteDescriptionImages"
                 />
+                <ul v-if="descriptionFiles.length" class="comment-files description-files">
+                  <li v-for="(file, index) in descriptionFiles" :key="`${file.name}-${file.size}`">
+                    <FileImage :size="12" />
+                    <span class="truncate">{{ file.name }}</span>
+                    <span class="faint text-xs">{{ formatFileSize(file.size) }}</span>
+                    <button type="button" class="file-remove" @click="removeDescriptionFile(index)">
+                      <X :size="12" />
+                    </button>
+                  </li>
+                </ul>
                 <div class="edit-actions">
-                  <button class="btn" type="button" @click="editingDescription = false">Annuler</button>
+                  <button class="btn" type="button" @click="cancelDescriptionEdit">Annuler</button>
                   <button class="btn btn-primary" type="button" :disabled="savingDescription" @click="saveDescription">
                     <Loader2 v-if="savingDescription" :size="14" class="spin" />
                     Enregistrer la description
@@ -1592,7 +1647,7 @@ onBeforeUnmount(() => {
         </div>
 
         <aside class="detail-side">
-          <section id="comment-composer" class="card composer-card" @paste="onCommentPaste">
+          <section id="comment-composer" class="card composer-card">
             <header class="card-head">
               <h2 class="card-title"><MessageSquarePlus :size="15" /> Ajouter un commentaire</h2>
               <span v-if="draftSaved" class="draft-saved">Brouillon enregistré</span>
@@ -1616,6 +1671,7 @@ onBeforeUnmount(() => {
                 placeholder="Votre commentaire… (@ pour mentionner, Ctrl+V / Cmd+V pour coller une image)"
                 :users="mentionUsers"
                 :resolve-user="session.resolveUserDetails"
+                :paste-images="pasteCommentImages"
               />
               <ul v-if="commentFiles.length" class="comment-files">
                 <li v-for="(file, index) in commentFiles" :key="`${file.name}-${file.size}`">

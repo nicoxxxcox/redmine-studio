@@ -26,6 +26,7 @@ import {
   formatDate,
   formatHours,
   formatShortDay,
+  fullName,
   isOverdue,
   relativeTime,
   startOfWeek,
@@ -34,6 +35,7 @@ import {
 import IssueId from '../components/IssueId.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import StatusQuickSelect from '../components/StatusQuickSelect.vue'
+import AssigneeQuickSelect from '../components/AssigneeQuickSelect.vue'
 import PriorityBadge from '../components/PriorityBadge.vue'
 import EmptyState from '../components/EmptyState.vue'
 import ColumnResizer from '../components/ColumnResizer.vue'
@@ -73,6 +75,8 @@ const columnsStyle = computed(() =>
   columnsResized.value ? { '--recent-cols': columnsTemplate.value } : {},
 )
 const statusSaving = ref(new Set())
+const assigneeSaving = ref(new Set())
+const issueMembers = ref(new Map())
 let loadSequence = 0
 
 const weekStart = ref(startOfWeek(new Date()))
@@ -163,7 +167,7 @@ async function load({ silent = false } = {}) {
   const sequence = ++loadSequence
   if (!silent) loading.value = true
   error.value = ''
-  const today = toIsoDate()
+  const overdueBefore = toIsoDate(addDays(new Date(), -1))
   const from = toIsoDate(weekStart.value)
   const to = toIsoDate(addDays(weekStart.value, 6))
   const api = settings.api
@@ -175,7 +179,12 @@ async function load({ silent = false } = {}) {
       limit: 100,
       sort: 'priority:desc,due_date:asc,updated_on:desc',
     }),
-    api.issues({ assigned_to_id: 'me', status_id: 'open', due_date: `<${today}`, limit: 1 }),
+    api.issues({
+      assigned_to_id: 'me',
+      status_id: 'open',
+      due_date: `<=${overdueBefore}`,
+      limit: 1,
+    }),
     api.issues({ author_id: 'me', status_id: 'open', limit: 1 }),
     api.timeEntries({ user_id: session.user?.id, from, to, limit: 100 }),
     api.issues({ status_id: '*', sort: 'updated_on:desc', limit: 7 }),
@@ -186,6 +195,7 @@ async function load({ silent = false } = {}) {
   if (mine.status === 'fulfilled') {
     myIssues.value = mine.value?.issues || []
     myTotal.value = mine.value?.total_count ?? myIssues.value.length
+    loadIssueMembers(priorityIssues.value)
   } else {
     error.value = mine.reason?.message || 'Impossible de charger vos tickets.'
   }
@@ -204,6 +214,69 @@ function setStatusSaving(issueId, value) {
   if (value) next.add(issueId)
   else next.delete(issueId)
   statusSaving.value = next
+}
+
+function setAssigneeSaving(issueId, value) {
+  const next = new Set(assigneeSaving.value)
+  if (value) next.add(issueId)
+  else next.delete(issueId)
+  assigneeSaving.value = next
+}
+
+function issueAssigneeOptions(issue) {
+  const projectMembers = issue?.project?.id
+    ? issueMembers.value.get(issue.project.id)
+    : null
+  const source = projectMembers?.length ? projectMembers : []
+  const current = issue?.assigned_to
+  if (current && !source.some((member) => member.id === current.id)) {
+    return [current, ...source]
+  }
+  return source
+}
+
+async function loadIssueMembers(list) {
+  const projectIds = [
+    ...new Set((list || []).map((issue) => issue.project?.id).filter(Boolean)),
+  ]
+  if (!projectIds.length) return
+  const results = await Promise.allSettled(
+    projectIds.map((projectId) => session.membersFor(projectId)),
+  )
+  const next = new Map(issueMembers.value)
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      next.set(
+        projectIds[index],
+        (result.value || []).filter((member) => !member.isGroup),
+      )
+    }
+  })
+  issueMembers.value = next
+}
+
+async function changeAssignee(issue, user) {
+  if (!issue || assigneeSaving.value.has(issue.id)) return
+  const previous = issue.assigned_to || null
+  if ((previous?.id ?? null) === (user?.id ?? null)) return
+
+  setAssigneeSaving(issue.id, true)
+  issue.assigned_to = user
+  try {
+    await settings.api.updateIssue(issue.id, { assigned_to_id: user?.id ?? null })
+    toast.success(
+      user
+        ? `Ticket #${issue.id} assigné à ${fullName(user)}.`
+        : `Ticket #${issue.id} n’est plus assigné.`,
+    )
+    await load({ silent: true })
+    refresh.bumpIssue()
+  } catch (err) {
+    issue.assigned_to = previous
+    toast.error(err?.message || 'Le changement d’assigné a été refusé.')
+  } finally {
+    setAssigneeSaving(issue.id, false)
+  }
 }
 
 async function changeStatus(issue, status) {
@@ -328,6 +401,14 @@ watch(() => refresh.timeVersion, load)
               </span>
             </div>
             <PriorityBadge :priority="issue.priority" :show-label="false" />
+            <AssigneeQuickSelect
+              class="priority-assignee"
+              :issue="issue"
+              :options="issueAssigneeOptions(issue)"
+              :busy="assigneeSaving.has(issue.id)"
+              compact
+              @change="changeAssignee(issue, $event)"
+            />
             <StatusQuickSelect
               :issue="issue"
               :busy="statusSaving.has(issue.id)"
@@ -706,6 +787,10 @@ watch(() => refresh.timeVersion, load)
   min-width: 0;
   flex: 1;
   gap: 1px;
+}
+
+.priority-assignee {
+  flex: none;
 }
 
 .priority-subject {

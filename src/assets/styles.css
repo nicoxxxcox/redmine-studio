@@ -1671,6 +1671,23 @@ ol {
   border-radius: var(--radius-sm);
 }
 
+.rt-image-ref {
+  display: inline-block;
+  max-width: min(100%, 280px);
+  padding: 1px 7px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.88em;
+  font-weight: 550;
+  line-height: 1.55;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
 /* --------------------------------------------------------------------------
    Issue grid (list header + rows)
    -------------------------------------------------------------------------- */

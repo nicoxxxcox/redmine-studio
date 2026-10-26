@@ -10,6 +10,7 @@ import { useToastStore } from '../stores/toast.js'
 import { useUiStore } from '../stores/ui.js'
 import { formatFileSize, fullName, parseHoursInput, toIsoDate } from '../lib/format.js'
 import { ApiError } from '../lib/api.js'
+import { clipboardImageFiles } from '../lib/pastedImages.js'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -38,6 +39,7 @@ const form = reactive({
 })
 
 const files = ref([])
+const descriptionEditor = ref(null)
 const members = ref([])
 const loadingMembers = ref(false)
 const saving = ref(false)
@@ -143,8 +145,8 @@ watch(
   },
 )
 
-function onFilesChange(event) {
-  const selected = Array.from(event.target.files || [])
+function addFiles(selected) {
+  const added = []
   for (const file of selected) {
     if (file.size > 20 * 1024 * 1024) {
       toast.error(`« ${file.name} » dépasse 20 Mo.`)
@@ -152,13 +154,29 @@ function onFilesChange(event) {
     }
     if (!files.value.some((item) => item.name === file.name && item.size === file.size)) {
       files.value.push(file)
+      added.push(file)
     }
   }
+  return added
+}
+
+function onFilesChange(event) {
+  addFiles(Array.from(event.target.files || []))
   event.target.value = ''
 }
 
+function pasteDescriptionImages(event) {
+  const images = clipboardImageFiles(event)
+  const added = addFiles(images)
+  if (added.length) {
+    toast.success(added.length > 1 ? `${added.length} images collées.` : 'Image collée dans la description.')
+  }
+  return added.map((file) => file.name)
+}
+
 function removeFile(index) {
-  files.value.splice(index, 1)
+  const [file] = files.value.splice(index, 1)
+  if (file) descriptionEditor.value?.removeImageReference(file.name)
 }
 
 async function submit() {
@@ -272,15 +290,18 @@ async function submit() {
           <label class="field-label" for="issue-description">Description</label>
           <RichTextEditor
             id="issue-description"
+            ref="descriptionEditor"
             v-model="form.description"
             min-height="200px"
             aria-label="Description du ticket"
             placeholder="Contexte, étapes de reproduction, résultat attendu… (@ pour mentionner)"
             :users="mentionUsers"
             :resolve-user="session.resolveUserDetails"
+            :paste-images="pasteDescriptionImages"
           />
           <span class="field-hint">
-            Mise en forme rapide ; l'icône source permet d'éditer le Textile.
+            Mise en forme rapide, Ctrl+V / Cmd+V pour coller une image ; l'icône source permet
+            d'éditer le Textile.
           </span>
         </div>
 
