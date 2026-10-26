@@ -1085,7 +1085,7 @@ watch(() => refresh.issueVersion, () => load())
 </script>
 
 <template>
-  <div class="page issues-page">
+  <div class="page issues-page" :class="{ 'has-batch-bar': selectedIds.size }">
     <header class="page-head">
       <div class="page-head-main">
         <h1 class="page-title">Tickets</h1>
@@ -1429,7 +1429,7 @@ watch(() => refresh.issueVersion, () => load())
         <Check v-else :size="13" />
         Appliquer
       </button>
-      <button class="btn btn-sm" type="button" :disabled="batchApplying" @click="clearSelection">
+      <button class="btn btn-sm batch-cancel" type="button" :disabled="batchApplying" @click="clearSelection">
         <X :size="13" /> Annuler
       </button>
     </section>
@@ -1896,15 +1896,40 @@ watch(() => refresh.issueVersion, () => load())
   font-size: 14px;
 }
 
+.issues-page.has-batch-bar {
+  padding-bottom: 140px;
+}
+
 .batch-bar {
+  position: fixed;
+  left: calc(var(--layout-sidebar-w, var(--sidebar-w)) + 34px);
+  right: 34px;
+  bottom: 20px;
+  z-index: 40;
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  width: auto;
+  max-width: 1412px;
+  margin: 0 auto;
   padding: 10px 12px;
   border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
   background: color-mix(in srgb, var(--accent-soft) 62%, var(--surface));
+  box-shadow: var(--shadow-lg);
+  animation: batch-bar-in 180ms var(--ease);
+  transition: left 220ms var(--ease), right 220ms var(--ease);
+}
+
+@keyframes batch-bar-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .batch-count {
@@ -2367,6 +2392,17 @@ watch(() => refresh.issueVersion, () => load())
   animation: spin 0.8s linear infinite;
 }
 
+@media (max-width: 1100px) {
+  .issues-page.has-batch-bar {
+    padding-bottom: 172px;
+  }
+  .batch-bar {
+    left: calc(var(--layout-sidebar-w, var(--sidebar-w)) + 22px);
+    right: 22px;
+    bottom: 14px;
+  }
+}
+
 @media (max-width: 1240px) {
   .filters-advanced {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2400,6 +2436,48 @@ watch(() => refresh.issueVersion, () => load())
 }
 
 @media (max-width: 640px) {
+  .issues-page.has-batch-bar {
+    padding-bottom: 240px;
+  }
+  .batch-bar {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    padding: 9px;
+    border-radius: var(--radius);
+    transition: none;
+  }
+  .batch-count {
+    grid-column: 1;
+    align-self: center;
+  }
+  .batch-select {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+  .batch-hint {
+    grid-column: 1 / -1;
+    min-width: 0;
+    flex-basis: auto;
+  }
+  .batch-progress {
+    grid-column: 1 / -1;
+  }
+  .batch-apply {
+    grid-column: 1;
+    width: 100%;
+    margin-left: 0;
+    justify-content: center;
+  }
+  .batch-cancel {
+    grid-column: 2;
+    width: 100%;
+    justify-content: center;
+  }
   .board-toolbar-label {
     display: none;
   }

@@ -301,7 +301,7 @@ ol {
   max-width: 1480px;
   margin: 0 auto;
   padding: 28px 34px 64px;
-  animation: page-in 280ms var(--ease) both;
+  animation: page-in 280ms var(--ease);
 }
 
 @keyframes page-in {

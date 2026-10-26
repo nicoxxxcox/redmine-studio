@@ -108,6 +108,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .app-shell {
+  --layout-sidebar-w: var(--sidebar-w);
   position: relative;
   z-index: 1;
   min-height: 100vh;
@@ -128,12 +129,20 @@ onBeforeUnmount(() => {
 }
 
 @media (min-width: 981px) {
+  .app-shell.is-sidebar-collapsed {
+    --layout-sidebar-w: var(--sidebar-w-collapsed);
+  }
+
   .app-shell.is-sidebar-collapsed .app-main {
     margin-left: var(--sidebar-w-collapsed);
   }
 }
 
 @media (max-width: 980px) {
+  .app-shell {
+    --layout-sidebar-w: 0px;
+  }
+
   .app-main {
     margin-left: 0;
   }
